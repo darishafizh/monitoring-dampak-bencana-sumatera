@@ -225,7 +225,7 @@ body::before {
 /* ===== Summary Cards ===== */
 .summary-section {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 1.25rem;
     margin-bottom: 2rem;
 }
@@ -1246,4 +1246,21 @@ tbody tr:hover {
 
 .lightbox-close:hover {
     opacity: 1;
+}
+
+@media (max-width: 1200px) {
+    .summary-section {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .summary-section {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (max-width: 480px) {
+    .summary-section {
+        grid-template-columns: 1fr;
+    }
 }

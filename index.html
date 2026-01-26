@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dampak Bencana Sumatera | Kementerian Kelautan dan Perikanan</title>
-    <meta name="description" content="Sistem Monitoring Program Monitoring Dampak Bencana Sumatera untuk pemantauan kerusakan infrastruktur dan estimasi biaya rehabilitasi">
+    <meta name="description" content="Sistem Monitoring Program Monitoring Dampak Bencana Sumatera">
     <link rel="stylesheet" href="style.css">
     <link rel="icon" type="image/png" href="assets/logo-kkp.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -17,6 +17,60 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- PptxGenJS for PowerPoint export -->
     <script src="https://cdn.jsdelivr.net/gh/gitbrent/PptxGenJS@3.12.0/dist/pptxgen.bundle.js"></script>
+    <style>
+        /* Custom styles for new dynamic content */
+        .badge-unit {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+        }
+        .badge-djpb { background-color: #0ea5e9; }
+        .badge-djpt { background-color: #0369a1; }
+        .badge-pdspkp { background-color: #0d9488; }
+        .badge-bppsdm { background-color: #7c3aed; }
+        .badge-other { background-color: #64748b; }
+        
+        .item-list-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .item-row {
+            padding: 12px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .item-row:last-child {
+            border-bottom: none;
+        }
+        
+        .item-details {
+            flex: 1;
+        }
+        
+        .item-title {
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+        
+        .item-meta {
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+        
+        .item-cost {
+            font-weight: 700;
+            color: #0369a1;
+            font-size: 0.95rem;
+            margin-left: 16px;
+        }
+    </style>
 </head>
 <body>
     <!-- Header -->
@@ -32,12 +86,9 @@
             <div class="header-stats">
                 <div class="mini-stat">
                     <span class="mini-stat-value" id="totalEntries">0</span>
-                    <span class="mini-stat-label">Total Data</span>
+                    <span class="mini-stat-label">Total Lokasi</span>
                 </div>
-                <div class="mini-stat">
-                    <span class="mini-stat-value" id="totalKabupaten">0</span>
-                    <span class="mini-stat-label">Kabupaten/Kota</span>
-                </div>
+                <!-- Removed Total Kabupaten redundant stat -->
             </div>
         </div>
     </header>
@@ -52,61 +103,23 @@
                         <option value="">Semua Provinsi</option>
                     </select>
                 </div>
+                 <div class="filter-item">
+                    <label for="filterUnit">🏢 Filter Unit:</label>
+                    <select id="filterUnit">
+                        <option value="">Semua Unit</option>
+                        <option value="DJPB">DJPB (Budidaya)</option>
+                        <option value="DJPT">DJPT (Tangkap)</option>
+                        <option value="PDSPKP">PDSPKP (Penguatan Daya Saing)</option>
+                         <option value="BPPSDM">BPPSDM (SDM)</option>
+                    </select>
+                </div>
             </div>
         </section>
 
-        <!-- Summary Cards -->
-        <section class="summary-section">
-            <div class="summary-card card-gradient-1">
-                <div class="card-icon"><img src="assets/tambak.png" alt="Tambak"></div>
-                <div class="card-content">
-                    <span class="card-value" id="totalTambak">0</span>
-                    <span class="card-label">Tambak Rusak (Ha)</span>
-                </div>
-            </div>
-            <div class="summary-card card-gradient-2">
-                <div class="card-icon"><img src="assets/kolam.png" alt="Kolam"></div>
-                <div class="card-content">
-                    <span class="card-value" id="totalKolam">0</span>
-                    <span class="card-label">Kolam Rusak (Ha)</span>
-                </div>
-            </div>
-            <div class="summary-card card-gradient-3">
-                <div class="card-icon"><img src="assets/kja.png" alt="KJA"></div>
-                <div class="card-content">
-                    <span class="card-value" id="totalKJA">0</span>
-                    <span class="card-label">KJA Rusak (Unit)</span>
-                </div>
-            </div>
-            <div class="summary-card card-gradient-4">
-                <div class="card-icon"><img src="assets/saluran.png" alt="Saluran"></div>
-                <div class="card-content">
-                    <span class="card-value" id="totalSaluran">0</span>
-                    <span class="card-label">Saluran (m³)</span>
-                </div>
-            </div>
-            <div class="summary-card card-gradient-5">
-                <div class="card-icon"><img src="assets/water-gate.png" alt="Pintu"></div>
-                <div class="card-content">
-                    <span class="card-value" id="totalPintuAir">0</span>
-                    <span class="card-label">Pintu Air (m²)</span>
-                </div>
-            </div>
-            <div class="summary-card card-gradient-6">
-                <div class="card-icon"><img src="assets/jalan.png" alt="Jalan"></div>
-                <div class="card-content">
-                    <span class="card-value" id="totalJalanProduksi">0</span>
-                    <span class="card-label">Jalan Produksi (M)</span>
-                </div>
-            </div>
-            <div class="summary-card card-gradient-7">
-                <div class="card-icon"><img src="assets/bbi.png" alt="BBI"></div>
-                <div class="card-content">
-                    <span class="card-value" id="totalRehabBBI">0</span>
-                    <span class="card-label">Rehab BBI (m²)</span>
-                </div>
-            </div>
-            <div class="summary-card card-gradient-8">
+        <!-- Summary Cards Section - Dynamic Content -->
+        <section class="summary-section" id="summaryCardsContainer">
+            <!-- Will be populated by JS -->
+             <div class="summary-card card-gradient-8">
                 <div class="card-icon">💰</div>
                 <div class="card-content">
                     <span class="card-value" id="totalBiaya">Rp 0</span>
@@ -117,20 +130,20 @@
 
         <!-- Map Section -->
         <section class="map-section glass-card">
-            <h3>🗺️ Peta Lokasi Kerusakan Infrastruktur</h3>
+            <h3>🗺️ Peta Sebaran Lokasi Bantuan</h3>
             <div id="map" class="map-container"></div>
         </section>
 
         <!-- Charts Section -->
         <div class="charts-grid">
             <section class="chart-card glass-card">
-                <h3>📊 Distribusi Kerusakan Infrastruktur</h3>
+                <h3>📊 Distribusi Biaya per Unit Kerja</h3>
                 <div class="chart-container">
-                    <canvas id="infrastrukturChart"></canvas>
+                    <canvas id="unitChart"></canvas>
                 </div>
             </section>
             <section class="chart-card glass-card">
-                <h3>📈 Estimasi Biaya per Kabupaten (Top 10)</h3>
+                <h3>📈 10 Kabupaten dengan Estimasi Biaya Tertinggi</h3>
                 <div class="chart-container">
                     <canvas id="kabupatenChart"></canvas>
                 </div>
@@ -140,20 +153,18 @@
         <!-- Data Table Section -->
         <section class="table-section glass-card">
             <div class="section-header">
-                <h2>📋 Data Monitoring</h2>
+                <h2>📋 Data Rekapitulasi Bantuan</h2>
                 <div class="table-actions">
-                    <input type="text" id="searchInput" placeholder="🔍 Cari data..." class="search-input">
+                    <input type="text" id="searchInput" placeholder="🔍 Cari Kabupaten..." class="search-input">
                     <div class="export-buttons">
                         <button class="btn btn-export" id="exportPdfBtn" title="Export ke PDF" onclick="exportToPDF()">
                             <span class="btn-icon">📄</span> PDF
                         </button>
-                        <button class="btn btn-export" id="exportPptBtn" title="Export ke PowerPoint" onclick="exportToPPT()">
+                        <!-- <button class="btn btn-export" id="exportPptBtn" title="Export ke PowerPoint" onclick="exportToPPT()">
                             <span class="btn-icon">📊</span> PPT
-                        </button>
+                        </button> -->
                     </div>
-                    <button class="btn btn-primary" id="addDataBtn" title="Tambah data baru">
-                        <span class="btn-icon">➕</span> Tambah Data
-                    </button>
+                    <!-- Add Data disabled for now as it is read-only from Excel -->
                 </div>
             </div>
             <div class="table-container">
@@ -163,13 +174,8 @@
                             <th>No</th>
                             <th>Provinsi</th>
                             <th>Kabupaten/Kota</th>
-                            <th>Tambak (Ha)</th>
-                            <th>Kolam (Ha)</th>
-                            <th>KJA (Unit)</th>
-                            <th>Saluran (m³)</th>
-                            <th>Pintu Air (m²)</th>
-                            <th>Jalan (M)</th>
-                            <th>BBI (m²)</th>
+                            <th>Jumlah Kegiatan</th>
+                            <th>Unit Terkait</th>
                             <th>Total Estimasi</th>
                             <th>Aksi</th>
                         </tr>
@@ -180,306 +186,31 @@
                 </table>
                 <div class="empty-state" id="emptyState">
                     <div class="empty-icon">📭</div>
-                    <p>Belum ada data yang dimasukkan</p>
-                    <span>Klik tombol "Tambah Data" untuk menambah data baru</span>
+                    <p>Tidak ada data yang ditemukan</p>
                 </div>
             </div>
         </section>
     </main>
 
-    <!-- Add Data Modal -->
-    <div class="modal" id="addModal">
+    <!-- Detail Modal -->
+    <div class="modal" id="detailModal">
         <div class="modal-content modal-large glass-card">
             <div class="modal-header">
-                <h3>➕ Tambah Data Baru</h3>
-                <button class="modal-close" id="closeAddModal">&times;</button>
+                <h3>📋 Detail Bantuan - <span id="detailKabupaten"></span></h3>
+                <button class="modal-close" onclick="closeDetailModal()">&times;</button>
             </div>
-            <form id="addForm">
-                <div class="modal-body">
-                    <!-- Lokasi -->
-                    <div class="form-section-title">📍 Lokasi</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="addProvinsi">Provinsi</label>
-                            <select id="addProvinsi" required>
-                                <option value="">Pilih Provinsi...</option>
-                                <option value="Aceh">Aceh</option>
-                                <option value="Sumatera Utara">Sumatera Utara</option>
-                                <option value="Sumatera Barat">Sumatera Barat</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="addKabupaten">Kabupaten/Kota</label>
-                            <input type="text" id="addKabupaten" placeholder="Contoh: Kab. Pidie" required>
-                        </div>
-                    </div>
-
-                    <!-- Tambak Rusak -->
-                    <div class="form-section-title">🏞️ Tambak Rusak</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="addTambakRusak">Luas (Ha)</label>
-                            <input type="number" id="addTambakRusak" placeholder="0" min="0" step="0.01" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="addBiayaTambak">Estimasi Biaya Rehabilitasi (Rp)</label>
-                            <input type="number" id="addBiayaTambak" placeholder="0" min="0" value="0" class="cost-input">
-                        </div>
-                    </div>
-
-                    <!-- Kolam Rusak -->
-                    <div class="form-section-title">🏊 Kolam Rusak</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="addKolamRusak">Luas (Ha)</label>
-                            <input type="number" id="addKolamRusak" placeholder="0" min="0" step="0.01" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="addBiayaKolam">Estimasi Biaya Rehabilitasi (Rp)</label>
-                            <input type="number" id="addBiayaKolam" placeholder="0" min="0" value="0" class="cost-input">
-                        </div>
-                    </div>
-
-                    <!-- KJA Rusak -->
-                    <div class="form-section-title">🎣 KJA Rusak</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="addKjaRusak">Jumlah (Unit)</label>
-                            <input type="number" id="addKjaRusak" placeholder="0" min="0" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="addBiayaKja">Estimasi Biaya Rehabilitasi (Rp)</label>
-                            <input type="number" id="addBiayaKja" placeholder="0" min="0" value="0" class="cost-input">
-                        </div>
-                    </div>
-
-                    <!-- Saluran -->
-                    <div class="form-section-title">🚿 Saluran</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="addSaluran">Panjang (m³)</label>
-                            <input type="number" id="addSaluran" placeholder="0" min="0" step="0.01" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="addBiayaSaluran">Estimasi Biaya Rehabilitasi (Rp)</label>
-                            <input type="number" id="addBiayaSaluran" placeholder="0" min="0" value="0" class="cost-input">
-                        </div>
-                    </div>
-
-                    <!-- Pintu Air -->
-                    <div class="form-section-title">🚪 Pintu Air</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="addPintuAir">Luas (m²)</label>
-                            <input type="number" id="addPintuAir" placeholder="0" min="0" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="addBiayaPintuAir">Estimasi Biaya Rehabilitasi (Rp)</label>
-                            <input type="number" id="addBiayaPintuAir" placeholder="0" min="0" value="0" class="cost-input">
-                        </div>
-                    </div>
-
-                    <!-- Jalan Produksi -->
-                    <div class="form-section-title">🛤️ Jalan Produksi</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="addJalanProduksi">Panjang (M)</label>
-                            <input type="number" id="addJalanProduksi" placeholder="0" min="0" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="addBiayaJalan">Estimasi Biaya Rehabilitasi (Rp)</label>
-                            <input type="number" id="addBiayaJalan" placeholder="0" min="0" value="0" class="cost-input">
-                        </div>
-                    </div>
-
-                    <!-- Rehab BBI -->
-                    <div class="form-section-title">🏢 Rehab BBI</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="addRehabBBI">Luas (m²)</label>
-                            <input type="number" id="addRehabBBI" placeholder="0" min="0" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="addBiayaBBI">Estimasi Biaya Rehabilitasi (Rp)</label>
-                            <input type="number" id="addBiayaBBI" placeholder="0" min="0" value="0" class="cost-input">
-                        </div>
-                    </div>
-
-                    <!-- Total -->
-                    <div class="form-section-title">💰 Total Estimasi</div>
-                    <div class="form-row">
-                        <div class="form-group form-group-full">
-                            <label for="addTotalBiaya">Total Estimasi Rehabilitasi (Rp)</label>
-                            <input type="text" id="addTotalBiaya" readonly class="total-input">
-                        </div>
-                    </div>
+            <div class="modal-body">
+                <div class="photo-info">
+                    <p><strong>Provinsi:</strong> <span id="detailProvinsi"></span></p>
+                    <p><strong>Total Biaya:</strong> <span id="detailTotalBiaya" style="color: #0284c7; font-weight: bold;"></span></p>
                 </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">💾 Simpan Data</button>
-                    <button type="button" class="btn btn-secondary" id="cancelAddModal">Batal</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Edit Modal -->
-    <div class="modal" id="editModal">
-        <div class="modal-content modal-large glass-card">
-            <div class="modal-header">
-                <h3>✏️ Edit Data</h3>
-                <button class="modal-close" id="closeModal">&times;</button>
-            </div>
-            <form id="editForm">
-                <input type="hidden" id="editId">
-                <div class="modal-body">
-                    <!-- Lokasi -->
-                    <div class="form-section-title">📍 Lokasi</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="editProvinsi">Provinsi</label>
-                            <select id="editProvinsi" required>
-                                <option value="Aceh">Aceh</option>
-                                <option value="Sumatera Utara">Sumatera Utara</option>
-                                <option value="Sumatera Barat">Sumatera Barat</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="editKabupaten">Kabupaten/Kota</label>
-                            <input type="text" id="editKabupaten" required>
-                        </div>
-                    </div>
-
-                    <!-- Tambak Rusak -->
-                    <div class="form-section-title">🏞️ Tambak Rusak</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="editTambakRusak">Luas (Ha)</label>
-                            <input type="number" id="editTambakRusak" min="0" step="0.01">
-                        </div>
-                        <div class="form-group">
-                            <label for="editBiayaTambak">Estimasi Biaya Rehabilitasi (Rp)</label>
-                            <input type="number" id="editBiayaTambak" min="0" class="cost-input">
-                        </div>
-                    </div>
-
-                    <!-- Kolam Rusak -->
-                    <div class="form-section-title">🏊 Kolam Rusak</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="editKolamRusak">Luas (Ha)</label>
-                            <input type="number" id="editKolamRusak" min="0" step="0.01">
-                        </div>
-                        <div class="form-group">
-                            <label for="editBiayaKolam">Estimasi Biaya Rehabilitasi (Rp)</label>
-                            <input type="number" id="editBiayaKolam" min="0" class="cost-input">
-                        </div>
-                    </div>
-
-                    <!-- KJA Rusak -->
-                    <div class="form-section-title">🎣 KJA Rusak</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="editKjaRusak">Jumlah (Unit)</label>
-                            <input type="number" id="editKjaRusak" min="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="editBiayaKja">Estimasi Biaya Rehabilitasi (Rp)</label>
-                            <input type="number" id="editBiayaKja" min="0" class="cost-input">
-                        </div>
-                    </div>
-
-                    <!-- Saluran -->
-                    <div class="form-section-title">🚿 Saluran</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="editSaluran">Panjang (m³)</label>
-                            <input type="number" id="editSaluran" min="0" step="0.01">
-                        </div>
-                        <div class="form-group">
-                            <label for="editBiayaSaluran">Estimasi Biaya Rehabilitasi (Rp)</label>
-                            <input type="number" id="editBiayaSaluran" min="0" class="cost-input">
-                        </div>
-                    </div>
-
-                    <!-- Pintu Air -->
-                    <div class="form-section-title">🚪 Pintu Air</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="editPintuAir">Luas (m²)</label>
-                            <input type="number" id="editPintuAir" min="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="editBiayaPintuAir">Estimasi Biaya Rehabilitasi (Rp)</label>
-                            <input type="number" id="editBiayaPintuAir" min="0" class="cost-input">
-                        </div>
-                    </div>
-
-                    <!-- Jalan Produksi -->
-                    <div class="form-section-title">🛤️ Jalan Produksi</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="editJalanProduksi">Panjang (M)</label>
-                            <input type="number" id="editJalanProduksi" min="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="editBiayaJalan">Estimasi Biaya Rehabilitasi (Rp)</label>
-                            <input type="number" id="editBiayaJalan" min="0" class="cost-input">
-                        </div>
-                    </div>
-
-                    <!-- Rehab BBI -->
-                    <div class="form-section-title">🏢 Rehab BBI</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="editRehabBBI">Luas (m²)</label>
-                            <input type="number" id="editRehabBBI" min="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="editBiayaBBI">Estimasi Biaya Rehabilitasi (Rp)</label>
-                            <input type="number" id="editBiayaBBI" min="0" class="cost-input">
-                        </div>
-                    </div>
-
-                    <!-- Total -->
-                    <div class="form-section-title">💰 Total Estimasi</div>
-                    <div class="form-row">
-                        <div class="form-group form-group-full">
-                            <label for="editTotalBiaya">Total Estimasi Rehabilitasi (Rp)</label>
-                            <input type="text" id="editTotalBiaya" readonly class="total-input">
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">💾 Simpan Perubahan</button>
-                    <button type="button" class="btn btn-secondary" id="cancelEdit">Batal</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Photo Modal -->
-    <div class="modal" id="photoModal">
-        <div class="modal-content modal-large glass-card">
-            <div class="modal-header">
-                <h3>📷 Dokumentasi Kerusakan - <span id="photoKabupatenName"></span></h3>
-                <button class="modal-close" id="closePhotoModal">&times;</button>
-            </div>
-            <div class="modal-body photo-modal-body">
-                <div class="photo-info" id="photoInfo">
-                    <p><strong>Provinsi:</strong> <span id="photoProvinsi"></span></p>
-                    <p><strong>Kabupaten/Kota:</strong> <span id="photoKabupaten"></span></p>
-                </div>
-                <div class="photo-gallery" id="photoGallery">
-                    <!-- Photos will be loaded here -->
-                </div>
-                <div class="photo-upload-section">
-                    <h4>📤 Upload Dokumentasi Baru</h4>
-                    <input type="file" id="photoInput" accept="image/*" multiple class="photo-input">
-                    <p class="photo-hint">Pilih satu atau lebih foto dokumentasi kerusakan</p>
+                <div class="form-section-title">Rincian Kegiatan</div>
+                <div class="item-list-container" id="detailItemsList">
+                    <!-- Items will be populated here -->
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" id="cancelPhotoModal">Tutup</button>
+                <button type="button" class="btn btn-secondary" onclick="closeDetailModal()">Tutup</button>
             </div>
         </div>
     </div>
@@ -491,7 +222,7 @@
     </div>
 
     <footer class="footer">
-        <p>© 2024 Dashboard Monitoring Dampak Bencana Sumatera | Kementerian Kelautan dan Perikanan RI</p>
+        <p>© 2026 Dashboard Monitoring Dampak Bencana Sumatera | Kementerian Kelautan dan Perikanan RI</p>
     </footer>
 
     <script src="seed-data.js"></script>
