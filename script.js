@@ -3,6 +3,16 @@ const STORAGE_KEY = 'budidayaData';
 let currentProvinsiFilter = '';
 let currentUnitFilter = '';
 
+// Initialize localStorage with seedData if empty or outdated
+function initializeData() {
+    // Check if seedData exists (loaded from seed-data.js)
+    if (typeof seedData !== 'undefined' && seedData.length > 0) {
+        // Always reload from seedData to ensure fresh data
+        saveData(seedData);
+        console.log('Data loaded from seed-data.js:', seedData.length, 'entries');
+    }
+}
+
 // Get data from localStorage
 function getData() {
     const data = localStorage.getItem(STORAGE_KEY);
@@ -486,6 +496,7 @@ function refreshAll() {
 }
 
 function init() {
+    initializeData(); // Load seedData into localStorage
     document.getElementById('searchInput').addEventListener('input', renderTable);
     populateFilters();
     refreshAll();
