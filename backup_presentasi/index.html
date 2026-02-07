@@ -7,9 +7,7 @@
     <meta name="description" content="Sistem Monitoring Program Monitoring Dampak Bencana Sumatera">
     <link rel="stylesheet" href="style.css">
     <link rel="icon" type="image/png" href="assets/logo-kkp.png">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -95,16 +93,6 @@
         </div>
     </header>
 
-    <!-- Navigation -->
-    <nav class="main-nav">
-        <a href="index.html" class="active"><i class="fas fa-chart-pie nav-icon"></i> Dashboard</a>
-        <a href="rencana-induk.html"><i class="fas fa-clipboard-list nav-icon"></i> Rencana Induk</a>
-        <a href="rehabilitasi.html"><i class="fas fa-tools nav-icon"></i> Rehabilitasi</a>
-        <a href="pemulihan-ekonomi.html"><i class="fas fa-coins nav-icon"></i> Pemulihan Ekonomi</a>
-        <a href="laporan-harian.html"><i class="fas fa-camera nav-icon"></i> Laporan Harian</a>
-        <a href="dasar-hukum.html"><i class="fas fa-gavel nav-icon"></i> Dasar Hukum</a>
-    </nav>
-
     <main class="main-container">
         <!-- Filter Section -->
         <section class="filter-section glass-card">
@@ -115,7 +103,7 @@
                         <option value="">Semua Provinsi</option>
                     </select>
                 </div>
-                <div class="filter-item">
+                 <div class="filter-item">
                     <label for="filterUnit">🏢 Filter Unit:</label>
                     <select id="filterUnit">
                         <option value="">Semua Unit</option>
@@ -123,14 +111,6 @@
                         <option value="DJPT">DJPT (Tangkap)</option>
                         <option value="PDSPKP">PDSPKP (Penguatan Daya Saing)</option>
                          <option value="BPPSDM">BPPSDM (SDM)</option>
-                    </select>
-                </div>
-                <div class="filter-item">
-                    <label for="filterKategori">📊 Kategori Anggaran:</label>
-                    <select id="filterKategori">
-                        <option value="">Semua Kategori</option>
-                        <option value="Reguler">A. Reguler (RKA KL 2026)</option>
-                        <option value="Tambahan (On Top)">B. Usulan Tambahan</option>
                     </select>
                 </div>
             </div>

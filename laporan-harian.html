@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Harian | Monitoring Dampak Bencana Sumatera</title>
+    <meta name="description" content="Laporan Harian dan Dokumentasi Kegiatan Rehabilitasi">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="assets/logo-kkp.png">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo-icon"><img src="assets/logo-kkp.png" alt="Logo KKP"></div>
+                <div class="logo-text">
+                    <h1>Dashboard Monitoring</h1>
+                    <p>Rencana Rehabilitasi Bencana Sumatera</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <a href="index.html"><i class="fas fa-chart-pie nav-icon"></i> Dashboard</a>
+        <a href="rencana-induk.html"><i class="fas fa-clipboard-list nav-icon"></i> Rencana Induk</a>
+        <a href="rehabilitasi.html"><i class="fas fa-tools nav-icon"></i> Rehabilitasi</a>
+        <a href="pemulihan-ekonomi.html"><i class="fas fa-coins nav-icon"></i> Pemulihan Ekonomi</a>
+        <a href="laporan-harian.html" class="active"><i class="fas fa-camera nav-icon"></i> Laporan Harian</a>
+        <a href="dasar-hukum.html"><i class="fas fa-gavel nav-icon"></i> Dasar Hukum</a>
+    </nav>
+
+    <!-- Page Title -->
+    <section class="page-title-section">
+        <h1><i class="fas fa-camera"></i> Laporan Harian</h1>
+        <p>Dokumentasi Foto Kegiatan Rehabilitasi dan Pemulihan Ekonomi di Lapangan</p>
+    </section>
+
+    <!-- Gallery Controls -->
+    <div class="gallery-controls">
+        <div class="date-picker-group">
+            <label for="filterDate">📅 Filter Tanggal:</label>
+            <input type="date" id="filterDate">
+            <button class="btn btn-secondary" onclick="clearFilter()" style="padding: 0.5rem 1rem;">Reset</button>
+        </div>
+        <div class="date-picker-group">
+            <label for="filterLokasi">📍 Lokasi:</label>
+            <select id="filterLokasi" style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <option value="">Semua Lokasi</option>
+                <option value="Aceh">Aceh</option>
+                <option value="Sumatera Utara">Sumatera Utara</option>
+                <option value="Sumatera Barat">Sumatera Barat</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Photo Gallery -->
+    <div class="photo-grid" id="photoGrid">
+        <!-- Photos will be populated by JavaScript -->
+    </div>
+
+    <!-- Empty State -->
+    <div class="gallery-empty" id="emptyState" style="display: none;">
+        <div class="gallery-empty-icon">📷</div>
+        <h3>Belum Ada Foto</h3>
+        <p>Foto laporan harian akan ditampilkan di sini</p>
+    </div>
+
+    <!-- Lightbox -->
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+        <span class="lightbox-close">&times;</span>
+        <img id="lightboxImg" src="" alt="Foto Detail">
+    </div>
+
+    <footer class="footer">
+        <p>© 2026 Dashboard Monitoring Dampak Bencana Sumatera | Kementerian Kelautan dan Perikanan RI</p>
+    </footer>
+
+    <script>
+        // Sample Laporan Harian Data
+        // Format link Google Drive: https://drive.google.com/uc?id=FILE_ID
+        // Pastikan file di-share dengan "Anyone with the link can view"
+        const laporanHarianData = [
+            {
+                id: 1,
+                tanggal: "2026-02-07",
+                lokasi: "Aceh",
+                kabupaten: "Kab. Pidie",
+                caption: "Survei lokasi tambak yang terdampak banjir",
+                gdriveLink: "https://via.placeholder.com/400x300/0ea5e9/ffffff?text=Survei+Tambak"
+            },
+            {
+                id: 2,
+                tanggal: "2026-02-07",
+                lokasi: "Aceh",
+                kabupaten: "Kab. Bireuen",
+                caption: "Distribusi bantuan alat tangkap kepada nelayan",
+                gdriveLink: "https://via.placeholder.com/400x300/0369a1/ffffff?text=Distribusi+Bantuan"
+            },
+            {
+                id: 3,
+                tanggal: "2026-02-06",
+                lokasi: "Sumatera Utara",
+                kabupaten: "Kota Sibolga",
+                caption: "Rehabilitasi dermaga pelabuhan perikanan",
+                gdriveLink: "https://via.placeholder.com/400x300/059669/ffffff?text=Rehabilitasi+Dermaga"
+            },
+            {
+                id: 4,
+                tanggal: "2026-02-06",
+                lokasi: "Sumatera Utara",
+                kabupaten: "Kab. Langkat",
+                caption: "Penyerahan bantuan benih ikan kepada pembudidaya",
+                gdriveLink: "https://via.placeholder.com/400x300/10b981/ffffff?text=Bantuan+Benih"
+            },
+            {
+                id: 5,
+                tanggal: "2026-02-05",
+                lokasi: "Sumatera Barat",
+                kabupaten: "Kota Padang",
+                caption: "Perbaikan kolam budi daya pasca banjir",
+                gdriveLink: "https://via.placeholder.com/400x300/7c3aed/ffffff?text=Perbaikan+Kolam"
+            },
+            {
+                id: 6,
+                tanggal: "2026-02-05",
+                lokasi: "Sumatera Barat",
+                kabupaten: "Kab. Agam",
+                caption: "Pelatihan pengolahan hasil perikanan",
+                gdriveLink: "https://via.placeholder.com/400x300/8b5cf6/ffffff?text=Pelatihan"
+            },
+            {
+                id: 7,
+                tanggal: "2026-02-04",
+                lokasi: "Aceh",
+                kabupaten: "Kota Langsa",
+                caption: "Pengerukan alur sungai pelabuhan",
+                gdriveLink: "https://via.placeholder.com/400x300/0891b2/ffffff?text=Pengerukan"
+            },
+            {
+                id: 8,
+                tanggal: "2026-02-04",
+                lokasi: "Aceh",
+                kabupaten: "Kab. Aceh Utara",
+                caption: "Distribusi pakan ikan bantuan",
+                gdriveLink: "https://via.placeholder.com/400x300/06b6d4/ffffff?text=Distribusi+Pakan"
+            }
+        ];
+
+        let currentDateFilter = '';
+        let currentLokasiFilter = '';
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('id-ID', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+        }
+
+        function renderGallery() {
+            const grid = document.getElementById('photoGrid');
+            const emptyState = document.getElementById('emptyState');
+
+            let filtered = laporanHarianData.filter(item => {
+                const matchDate = !currentDateFilter || item.tanggal === currentDateFilter;
+                const matchLokasi = !currentLokasiFilter || item.lokasi === currentLokasiFilter;
+                return matchDate && matchLokasi;
+            });
+
+            if (filtered.length === 0) {
+                grid.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            grid.style.display = 'grid';
+            emptyState.style.display = 'none';
+
+            grid.innerHTML = filtered.map(item => `
+                <div class="photo-card">
+                    <img src="${item.gdriveLink}" 
+                         alt="${item.caption}" 
+                         class="photo-card-image"
+                         onclick="openLightbox('${item.gdriveLink}')">
+                    <div class="photo-card-content">
+                        <div class="photo-date">${formatDate(item.tanggal)}</div>
+                        <div class="photo-location">📍 ${item.kabupaten}, ${item.lokasi}</div>
+                        <div class="photo-caption">${item.caption}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openLightbox(src) {
+            document.getElementById('lightboxImg').src = src;
+            document.getElementById('lightbox').classList.add('show');
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('show');
+        }
+
+        function clearFilter() {
+            document.getElementById('filterDate').value = '';
+            document.getElementById('filterLokasi').value = '';
+            currentDateFilter = '';
+            currentLokasiFilter = '';
+            renderGallery();
+        }
+
+        document.getElementById('filterDate').addEventListener('change', (e) => {
+            currentDateFilter = e.target.value;
+            renderGallery();
+        });
+
+        document.getElementById('filterLokasi').addEventListener('change', (e) => {
+            currentLokasiFilter = e.target.value;
+            renderGallery();
+        });
+
+        // Close lightbox with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeLightbox();
+        });
+
+        document.addEventListener('DOMContentLoaded', renderGallery);
+    </script>
+</body>
+</html>

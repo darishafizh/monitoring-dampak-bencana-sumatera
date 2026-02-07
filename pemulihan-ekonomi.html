@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pemulihan Ekonomi | Monitoring Dampak Bencana Sumatera</title>
+    <meta name="description" content="Program Pemulihan Ekonomi Pascabencana Sektor Kelautan dan Perikanan">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="assets/logo-kkp.png">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo-icon"><img src="assets/logo-kkp.png" alt="Logo KKP"></div>
+                <div class="logo-text">
+                    <h1>Dashboard Monitoring</h1>
+                    <p>Rencana Rehabilitasi Bencana Sumatera</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <a href="index.html"><i class="fas fa-chart-pie nav-icon"></i> Dashboard</a>
+        <a href="rencana-induk.html"><i class="fas fa-clipboard-list nav-icon"></i> Rencana Induk</a>
+        <a href="rehabilitasi.html"><i class="fas fa-tools nav-icon"></i> Rehabilitasi</a>
+        <a href="pemulihan-ekonomi.html" class="active"><i class="fas fa-coins nav-icon"></i> Pemulihan Ekonomi</a>
+        <a href="laporan-harian.html"><i class="fas fa-camera nav-icon"></i> Laporan Harian</a>
+        <a href="dasar-hukum.html"><i class="fas fa-gavel nav-icon"></i> Dasar Hukum</a>
+    </nav>
+
+    <!-- Page Title -->
+    <section class="page-title-section">
+        <h1><i class="fas fa-coins"></i> Pemulihan Ekonomi</h1>
+        <p>Program Bantuan dan Pemulihan Ekonomi Pelaku Usaha Kelautan dan Perikanan Pascabencana</p>
+    </section>
+
+    <!-- Summary Stats -->
+    <section class="summary-section" style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
+        <div class="summary-card card-gradient-1">
+            <div class="card-icon">📦</div>
+            <div class="card-content">
+                <span class="card-value" id="totalProgram">0</span>
+                <span class="card-label">Total Program Bantuan</span>
+            </div>
+        </div>
+        <div class="summary-card card-gradient-2">
+            <div class="card-icon">🚤</div>
+            <div class="card-content">
+                <span class="card-value" id="totalNelayan">0</span>
+                <span class="card-label">Bantuan Nelayan</span>
+            </div>
+        </div>
+        <div class="summary-card card-gradient-3">
+            <div class="card-icon">🐟</div>
+            <div class="card-content">
+                <span class="card-value" id="totalBudidaya">0</span>
+                <span class="card-label">Bantuan Pembudidaya</span>
+            </div>
+        </div>
+        <div class="summary-card card-gradient-4">
+            <div class="card-icon">🏭</div>
+            <div class="card-content">
+                <span class="card-value" id="totalPengolah">0</span>
+                <span class="card-label">Bantuan Pengolah</span>
+            </div>
+        </div>
+        <div class="summary-card card-gradient-8">
+            <div class="card-icon">💵</div>
+            <div class="card-content">
+                <span class="card-value" id="totalAnggaran">Rp 0</span>
+                <span class="card-label">Total Anggaran Pemulihan</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Charts -->
+    <div class="charts-grid" style="max-width: 1400px; margin: 0 auto; padding: 0 2rem;">
+        <section class="chart-card glass-card">
+            <h3>📊 Distribusi Anggaran per Provinsi</h3>
+            <div class="chart-container">
+                <canvas id="provinsiChart"></canvas>
+            </div>
+        </section>
+        <section class="chart-card glass-card">
+            <h3>📈 Jenis Bantuan Ekonomi</h3>
+            <div class="chart-container">
+                <canvas id="bantuanChart"></canvas>
+            </div>
+        </section>
+    </div>
+
+    <!-- Data Table -->
+    <div class="dashboard-container">
+        <section class="table-section glass-card">
+            <div class="section-header">
+                <h2>📋 Data Program Pemulihan Ekonomi</h2>
+                <div class="table-actions">
+                    <input type="text" id="searchInput" placeholder="🔍 Cari program..." class="search-input">
+                    <select id="filterProvinsi" style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <option value="">Semua Provinsi</option>
+                        <option value="Aceh">Aceh</option>
+                        <option value="Sumatera Utara">Sumatera Utara</option>
+                        <option value="Sumatera Barat">Sumatera Barat</option>
+                    </select>
+                </div>
+            </div>
+            <div class="table-container">
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Program Bantuan</th>
+                            <th>Jenis Bantuan</th>
+                            <th>Provinsi</th>
+                            <th>Sasaran</th>
+                            <th>Total Anggaran</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <footer class="footer">
+        <p>© 2026 Dashboard Monitoring Dampak Bencana Sumatera | Kementerian Kelautan dan Perikanan RI</p>
+    </footer>
+
+    <script src="rencana-induk-data.js"></script>
+    <script>
+        function formatCurrency(amount) {
+            if (!amount || amount === 0) return '-';
+            return 'Rp ' + new Intl.NumberFormat('id-ID').format(amount * 1000);
+        }
+
+        function formatCurrencyCompact(amount) {
+            if (!amount || amount === 0) return '-';
+            const value = amount * 1000;
+            if (value >= 1e12) return 'Rp ' + (value / 1e12).toFixed(2) + ' T';
+            if (value >= 1e9) return 'Rp ' + (value / 1e9).toFixed(2) + ' M';
+            if (value >= 1e6) return 'Rp ' + (value / 1e6).toFixed(1) + ' Jt';
+            return formatCurrency(amount);
+        }
+
+        let currentFilter = '';
+        let provinsiChart = null;
+        let bantuanChart = null;
+
+        function getEkonomiData() {
+            if (typeof rencanaIndukData === 'undefined') return [];
+            return rencanaIndukData.filter(item => item.sektor === 'Ekonomi');
+        }
+
+        function updateStats() {
+            const data = getEkonomiData();
+            const filtered = currentFilter ? data.filter(d => d.provinsi === currentFilter) : data;
+            
+            document.getElementById('totalProgram').textContent = filtered.length;
+            document.getElementById('totalNelayan').textContent = filtered.filter(d => d.sasaran.includes('Nelayan')).length;
+            document.getElementById('totalBudidaya').textContent = filtered.filter(d => d.sasaran.includes('Pembudidaya') || d.sasaran.includes('Budidaya')).length;
+            document.getElementById('totalPengolah').textContent = filtered.filter(d => d.sasaran.includes('Pengolah')).length;
+            
+            const total = filtered.reduce((sum, d) => sum + (d.totalAnggaran || 0), 0);
+            document.getElementById('totalAnggaran').textContent = formatCurrencyCompact(total);
+        }
+
+        function renderTable() {
+            const data = getEkonomiData();
+            const searchVal = document.getElementById('searchInput').value.toLowerCase();
+            
+            let filtered = data.filter(item => {
+                const matchSearch = item.program.toLowerCase().includes(searchVal) || 
+                                   item.rencanaAksi.toLowerCase().includes(searchVal);
+                const matchProvinsi = !currentFilter || item.provinsi === currentFilter;
+                return matchSearch && matchProvinsi;
+            });
+
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = filtered.map((item, i) => `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td><strong>${item.program}</strong></td>
+                    <td>${item.rencanaAksi}</td>
+                    <td>${item.provinsi}</td>
+                    <td>${item.sasaran}</td>
+                    <td class="budget-total">${formatCurrencyCompact(item.totalAnggaran)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function updateCharts() {
+            const data = getEkonomiData();
+            
+            // Group by provinsi
+            const byProvinsi = {};
+            data.forEach(d => {
+                byProvinsi[d.provinsi] = (byProvinsi[d.provinsi] || 0) + (d.totalAnggaran || 0);
+            });
+
+            // Group by bantuan type
+            const byBantuan = {};
+            data.forEach(d => {
+                const key = d.sasaran.split(' ')[0] + ' ' + (d.sasaran.split(' ')[1] || '');
+                byBantuan[key] = (byBantuan[key] || 0) + (d.totalAnggaran || 0);
+            });
+
+            // Provinsi Chart
+            if (provinsiChart) provinsiChart.destroy();
+            const ctx1 = document.getElementById('provinsiChart').getContext('2d');
+            provinsiChart = new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(byProvinsi),
+                    datasets: [{
+                        data: Object.values(byProvinsi).map(v => v / 1000000000),
+                        backgroundColor: ['#10b981', '#059669', '#047857'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: { callbacks: { label: ctx => ctx.label + ': ' + ctx.raw.toFixed(2) + ' M' } }
+                    }
+                }
+            });
+
+            // Bantuan Chart
+            if (bantuanChart) bantuanChart.destroy();
+            const ctx2 = document.getElementById('bantuanChart').getContext('2d');
+            bantuanChart = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(byBantuan),
+                    datasets: [{
+                        label: 'Anggaran (Miliar)',
+                        data: Object.values(byBantuan).map(v => v / 1000000000),
+                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        document.getElementById('searchInput').addEventListener('input', renderTable);
+        document.getElementById('filterProvinsi').addEventListener('change', (e) => {
+            currentFilter = e.target.value;
+            updateStats();
+            renderTable();
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateStats();
+            renderTable();
+            updateCharts();
+        });
+    </script>
+</body>
+</html>

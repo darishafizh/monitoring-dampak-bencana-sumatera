@@ -2,7 +2,6 @@
 const STORAGE_KEY = 'budidayaData';
 let currentProvinsiFilter = '';
 let currentUnitFilter = '';
-let currentKategoriFilter = '';
 
 // Initialize localStorage with seedData if empty or outdated
 function initializeData() {
@@ -26,8 +25,7 @@ function getFilteredData() {
     return data.filter(item => {
         const matchProvinsi = !currentProvinsiFilter || item.provinsi === currentProvinsiFilter;
         const matchUnit = !currentUnitFilter || item.items.some(i => i.unit === currentUnitFilter);
-        const matchKategori = !currentKategoriFilter || item.items.some(i => i.kategori === currentKategoriFilter);
-        return matchProvinsi && matchUnit && matchKategori;
+        return matchProvinsi && matchUnit;
     });
 }
 
@@ -179,12 +177,6 @@ filterUnit.addEventListener('change', (e) => {
     refreshAll();
 });
 
-const filterKategori = document.getElementById('filterKategori');
-filterKategori.addEventListener('change', (e) => {
-    currentKategoriFilter = e.target.value;
-    refreshAll();
-});
-
 function populateFilters() {
     const data = getData();
     const provinsiSet = new Set(data.map(item => item.provinsi).filter(p => p));
@@ -249,13 +241,11 @@ function updateSummary() {
     
     let stats = {
         totalBiaya: 0,
-        regularBiaya: 0,
-        tambahanBiaya: 0,
         units: {
-            'DJPB': { regular: 0, tambahan: 0 },
-            'DJPT': { regular: 0, tambahan: 0 },
-            'PDSPKP': { regular: 0, tambahan: 0 },
-            'BPPSDM': { regular: 0, tambahan: 0 }
+            'DJPB': 0,
+            'DJPT': 0,
+            'PDSPKP': 0,
+            'BPPSDM': 0
         },
         kabupatenCount: data.length
     };
@@ -263,56 +253,25 @@ function updateSummary() {
     data.forEach(item => {
         stats.totalBiaya += item.totalBiaya;
         item.items.forEach(subItem => {
-            const isReguler = subItem.kategori === 'Reguler';
-            const isTambahan = subItem.kategori === 'Tambahan (On Top)';
-            
-            if (isReguler) {
-                stats.regularBiaya += subItem.biaya;
-            } else if (isTambahan) {
-                stats.tambahanBiaya += subItem.biaya;
-            }
-            
             if (stats.units[subItem.unit] !== undefined) {
-                if (isReguler) {
-                    stats.units[subItem.unit].regular += subItem.biaya;
-                } else {
-                    stats.units[subItem.unit].tambahan += subItem.biaya;
-                }
+                stats.units[subItem.unit] += subItem.biaya;
+            } else {
+                 // Fallback if there are other units
+                 if(!stats.units['Lainnya']) stats.units['Lainnya'] = 0;
+                 stats.units['Lainnya'] += subItem.biaya;
             }
         });
     });
     
     totalEntriesEl.textContent = formatNumber(stats.kabupatenCount);
+    totalBiayaEl.textContent = formatCurrency(stats.totalBiaya);
     
-    // Build KPI cards with detailed breakdown
-    // Regular Card
-    const regularCard = `
-        <div class="summary-card card-gradient-2">
-            <div class="card-icon">📋</div>
-            <div class="card-content">
-                <span class="card-value" style="font-size: 1.1rem;">${formatCurrency(stats.regularBiaya)}</span>
-                <span class="card-label">A. Reguler (RKA KL 2026)</span>
-                <span class="card-sublabel" style="font-size: 0.7rem; color: rgba(255,255,255,0.8);">Rp ${formatNumber(stats.regularBiaya / 1000)} ribu</span>
-            </div>
-        </div>
-    `;
+    // Dynamically create cards for Units
+    // Clear old cards except the Total Biaya card which we want to keep at the end
+    // Actually, let's rebuild the container content entirely
     
-    // Tambahan Card
-    const tambahanCard = `
-        <div class="summary-card card-gradient-3">
-            <div class="card-icon">📈</div>
-            <div class="card-content">
-                <span class="card-value" style="font-size: 1.1rem;">${formatCurrency(stats.tambahanBiaya)}</span>
-                <span class="card-label">B. Usulan Tambahan</span>
-                <span class="card-sublabel" style="font-size: 0.7rem; color: rgba(255,255,255,0.8);">Rp ${formatNumber(stats.tambahanBiaya / 1000)} ribu</span>
-            </div>
-        </div>
-    `;
-    
-    // Unit Cards with detailed amounts
-    const unitCards = Object.entries(stats.units).map(([unit, costs], index) => {
-        const totalCost = costs.regular + costs.tambahan;
-        if (totalCost === 0) return '';
+    const unitCards = Object.entries(stats.units).map(([unit, cost], index) => {
+        if (cost === 0) return '';
         
         const cardClass = `card-gradient-${(index % 6) + 1}`;
         let icon = '🏢';
@@ -327,30 +286,24 @@ function updateSummary() {
         <div class="summary-card ${cardClass}">
             <div class="card-icon">${icon}</div>
             <div class="card-content">
-                <span class="card-value" style="font-size: 1rem;">${formatCurrency(totalCost)}</span>
+                <span class="card-value">${formatCurrencyCompact(cost)}</span>
                 <span class="card-label">${label}</span>
-                <div class="card-breakdown" style="font-size: 0.65rem; color: rgba(255,255,255,0.85); margin-top: 4px;">
-                    ${costs.regular > 0 ? `<div>Reguler: ${formatCurrency(costs.regular)}</div>` : ''}
-                    ${costs.tambahan > 0 ? `<div>Tambahan: ${formatCurrency(costs.tambahan)}</div>` : ''}
-                </div>
             </div>
         </div>
         `;
     }).join('');
     
-    // Total Card with full detail
     const totalCard = `
          <div class="summary-card card-gradient-8">
             <div class="card-icon">💰</div>
             <div class="card-content">
-                <span class="card-value" id="totalBiaya" style="font-size: 1.2rem;">${formatCurrency(stats.totalBiaya)}</span>
+                <span class="card-value" id="totalBiaya">${formatCurrencyCompact(stats.totalBiaya)}</span>
                 <span class="card-label">Total Estimasi Biaya</span>
-                <span class="card-sublabel" style="font-size: 0.7rem; color: rgba(255,255,255,0.8);">Rp ${formatNumber(stats.totalBiaya / 1000)} ribu</span>
             </div>
         </div>
     `;
     
-    summaryCardsContainer.innerHTML = regularCard + tambahanCard + unitCards + totalCard;
+    summaryCardsContainer.innerHTML = unitCards + totalCard;
 }
 
 function updateCharts() {
@@ -476,12 +429,9 @@ function updateMap() {
         
         const markerIcon = L.divIcon({
             className: 'custom-marker',
-            html: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 24 30" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));">
-                <path fill="#dc2626" stroke="#fff" stroke-width="1.5" d="M12 0C5.4 0 0 5.4 0 12c0 7.5 12 18 12 18s12-10.5 12-18c0-6.6-5.4-12-12-12z"/>
-                <circle fill="#fff" cx="12" cy="11" r="4"/>
-            </svg>`,
-            iconSize: [28, 36],
-            iconAnchor: [14, 36]
+            html: `<div style="background: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`,
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
         });
         
         const popupContent = `

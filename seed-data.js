@@ -1,12 +1,12 @@
 // Seed data untuk Dashboard Monitoring Dampak Bencana Sumatera
 // Generated from PDF: KEMENTERIAN KELAUTAN DAN PERIKANAN rekap (1).pdf
-// Generated: 2026-01-29 20:20:34
-// Complete data: Regular (Rp 16.579.500.000) + Tambahan (Rp 1.736.773.705.000)
+// Updated: 2026-01-30 09:57:16
+// Provinces normalized to: Aceh, Sumatera Utara, Sumatera Barat
 
 const seedData = [
     {
         "id": "aceh-lhokseumawe",
-        "provinsi": "Provinsi Aceh",
+        "provinsi": "Aceh",
         "kabupaten": "Kota Lhokseumawe",
         "items": [
             {
@@ -54,7 +54,7 @@ const seedData = [
     },
     {
         "id": "aceh-aceh_utara",
-        "provinsi": "Provinsi Aceh",
+        "provinsi": "Aceh",
         "kabupaten": "Aceh Utara",
         "items": [
             {
@@ -150,7 +150,7 @@ const seedData = [
     },
     {
         "id": "aceh-bireun",
-        "provinsi": "Provinsi Aceh",
+        "provinsi": "Aceh",
         "kabupaten": "Bireun",
         "items": [
             {
@@ -238,7 +238,7 @@ const seedData = [
     },
     {
         "id": "aceh-langsa",
-        "provinsi": "Provinsi Aceh",
+        "provinsi": "Aceh",
         "kabupaten": "Kota Langsa",
         "items": [
             {
@@ -622,7 +622,7 @@ const seedData = [
     },
     {
         "id": "aceh-propinsi_aceh",
-        "provinsi": "Propinsi Aceh",
+        "provinsi": "Aceh",
         "kabupaten": "Propinsi Aceh",
         "items": [
             {
@@ -654,7 +654,7 @@ const seedData = [
     },
     {
         "id": "sumatera_utara-propinsi_sumatera_utara",
-        "provinsi": "Propinsi Sumatera Utara",
+        "provinsi": "Sumatera Utara",
         "kabupaten": "Propinsi Sumatera Utara",
         "items": [
             {
@@ -686,7 +686,7 @@ const seedData = [
     },
     {
         "id": "sumatera_barat-propinsi_sumatera_barat",
-        "provinsi": "Propinsi Sumatera Barat",
+        "provinsi": "Sumatera Barat",
         "kabupaten": "Propinsi Sumatera Barat",
         "items": [
             {
@@ -718,7 +718,7 @@ const seedData = [
     },
     {
         "id": "aceh-pidie_jaya",
-        "provinsi": "Propinsi Aceh",
+        "provinsi": "Aceh",
         "kabupaten": "Pidie Jaya",
         "items": [
             {
@@ -806,7 +806,7 @@ const seedData = [
     },
     {
         "id": "aceh-aceh_besar",
-        "provinsi": "Provinsi Aceh",
+        "provinsi": "Aceh",
         "kabupaten": "Aceh Besar",
         "items": [
             {
@@ -822,7 +822,7 @@ const seedData = [
     },
     {
         "id": "aceh-aceh_singkil",
-        "provinsi": "Provinsi Aceh",
+        "provinsi": "Aceh",
         "kabupaten": "Aceh Singkil",
         "items": [
             {
@@ -862,7 +862,7 @@ const seedData = [
     },
     {
         "id": "aceh-aceh_timur",
-        "provinsi": "Provinsi Aceh",
+        "provinsi": "Aceh",
         "kabupaten": "Aceh Timur",
         "items": [
             {
@@ -942,7 +942,7 @@ const seedData = [
     },
     {
         "id": "aceh-pidie",
-        "provinsi": "Provinsi Aceh",
+        "provinsi": "Aceh",
         "kabupaten": "Pidie",
         "items": [
             {
@@ -1086,7 +1086,7 @@ const seedData = [
     },
     {
         "id": "aceh-aceh_tamiang",
-        "provinsi": "Provinsi Aceh",
+        "provinsi": "Aceh",
         "kabupaten": "Aceh Tamiang",
         "items": [
             {
@@ -1398,7 +1398,7 @@ const seedData = [
     },
     {
         "id": "aceh-bireuen",
-        "provinsi": "Provinsi Aceh",
+        "provinsi": "Aceh",
         "kabupaten": "Bireuen",
         "items": [
             {
@@ -1422,7 +1422,7 @@ const seedData = [
     },
     {
         "id": "sumatera_utara-medan",
-        "provinsi": "Provinsi Sumatera Utara",
+        "provinsi": "Sumatera Utara",
         "kabupaten": "Kota Medan",
         "items": [
             {
@@ -1470,7 +1470,7 @@ const seedData = [
     },
     {
         "id": "sumatera_utara-tapanuli_tengah",
-        "provinsi": "Provinsi Sumatera Utara",
+        "provinsi": "Sumatera Utara",
         "kabupaten": "Tapanuli Tengah",
         "items": [
             {
@@ -1534,7 +1534,7 @@ const seedData = [
     },
     {
         "id": "sumatera_utara-sibolga_selatan",
-        "provinsi": "Provinsi Sumatera Utara",
+        "provinsi": "Sumatera Utara",
         "kabupaten": "Sibolga Selatan",
         "items": [
             {
@@ -1558,7 +1558,7 @@ const seedData = [
     },
     {
         "id": "sumatera_utara-sibolga_utara",
-        "provinsi": "Provinsi Sumatera Utara",
+        "provinsi": "Sumatera Utara",
         "kabupaten": "Sibolga Utara",
         "items": [
             {
@@ -1582,7 +1582,7 @@ const seedData = [
     },
     {
         "id": "sumatera_barat-pariaman",
-        "provinsi": "Provinsi Sumatera Barat",
+        "provinsi": "Sumatera Barat",
         "kabupaten": "Kota Pariaman",
         "items": [
             {
@@ -1614,7 +1614,7 @@ const seedData = [
     },
     {
         "id": "sumatera_barat-pasaman_barat",
-        "provinsi": "Provinsi Sumatera Barat",
+        "provinsi": "Sumatera Barat",
         "kabupaten": "Pasaman Barat",
         "items": [
             {
@@ -1638,7 +1638,7 @@ const seedData = [
     },
     {
         "id": "sumatera_barat-solok",
-        "provinsi": "Provinsi Sumatera Barat",
+        "provinsi": "Sumatera Barat",
         "kabupaten": "Solok",
         "items": [
             {
@@ -1758,7 +1758,7 @@ const seedData = [
     },
     {
         "id": "sumatera_utara-tapanuli_utara",
-        "provinsi": "Provinsi Sumatera Utara",
+        "provinsi": "Sumatera Utara",
         "kabupaten": "Tapanuli Utara",
         "items": [
             {
@@ -1814,7 +1814,7 @@ const seedData = [
     },
     {
         "id": "aceh-lhoukseumawe",
-        "provinsi": "Provinsi Aceh",
+        "provinsi": "Aceh",
         "kabupaten": "Kota Lhoukseumawe",
         "items": [
             {
@@ -1846,7 +1846,7 @@ const seedData = [
     },
     {
         "id": "sumatera_barat-pasaman",
-        "provinsi": "Provinsi Sumatera Barat",
+        "provinsi": "Sumatera Barat",
         "kabupaten": "Pasaman",
         "items": [
             {
@@ -1902,7 +1902,7 @@ const seedData = [
     },
     {
         "id": "sumatera_barat-tanah_datar",
-        "provinsi": "Provinsi Sumatera Barat",
+        "provinsi": "Sumatera Barat",
         "kabupaten": "Tanah Datar",
         "items": [
             {
@@ -1942,7 +1942,7 @@ const seedData = [
     },
     {
         "id": "sumatera_utara-padang_sidempuan",
-        "provinsi": "Provinsi Sumatera Utara",
+        "provinsi": "Sumatera Utara",
         "kabupaten": "Kota Padang Sidempuan",
         "items": [
             {
@@ -1982,7 +1982,7 @@ const seedData = [
     },
     {
         "id": "aceh-aceh_tengah",
-        "provinsi": "Provinsi Aceh",
+        "provinsi": "Aceh",
         "kabupaten": "Aceh Tengah",
         "items": [
             {
@@ -2006,7 +2006,7 @@ const seedData = [
     },
     {
         "id": "aceh-aceh_selatan",
-        "provinsi": "Provinsi Aceh",
+        "provinsi": "Aceh",
         "kabupaten": "Aceh Selatan",
         "items": [
             {
@@ -2022,7 +2022,7 @@ const seedData = [
     },
     {
         "id": "aceh-nagan_raya",
-        "provinsi": "Provinsi Aceh",
+        "provinsi": "Aceh",
         "kabupaten": "Nagan Raya",
         "items": [
             {
@@ -2038,7 +2038,7 @@ const seedData = [
     },
     {
         "id": "aceh-aceh_barat",
-        "provinsi": "Provinsi Aceh",
+        "provinsi": "Aceh",
         "kabupaten": "Aceh Barat",
         "items": [
             {
@@ -2054,7 +2054,7 @@ const seedData = [
     },
     {
         "id": "aceh-bener_meriah",
-        "provinsi": "Provinsi Aceh",
+        "provinsi": "Aceh",
         "kabupaten": "Bener Meriah",
         "items": [
             {
@@ -2078,7 +2078,7 @@ const seedData = [
     },
     {
         "id": "aceh-gayo_luwes",
-        "provinsi": "Provinsi Aceh",
+        "provinsi": "Aceh",
         "kabupaten": "Gayo Luwes",
         "items": [
             {
@@ -2102,7 +2102,7 @@ const seedData = [
     },
     {
         "id": "aceh-aceh_tenggara",
-        "provinsi": "Provinsi Aceh",
+        "provinsi": "Aceh",
         "kabupaten": "Aceh Tenggara",
         "items": [
             {
@@ -2126,7 +2126,7 @@ const seedData = [
     },
     {
         "id": "sumatera_utara-asahan",
-        "provinsi": "Provinsi Sumatera Utara",
+        "provinsi": "Sumatera Utara",
         "kabupaten": "Asahan",
         "items": [
             {
@@ -2166,7 +2166,7 @@ const seedData = [
     },
     {
         "id": "sumatera_utara-humbang_hasundutan",
-        "provinsi": "Provinsi Sumatera Utara",
+        "provinsi": "Sumatera Utara",
         "kabupaten": "Humbang Hasundutan",
         "items": [
             {
@@ -2190,7 +2190,7 @@ const seedData = [
     },
     {
         "id": "sumatera_barat-lima_puluh_kota",
-        "provinsi": "Provinsi Sumatera Barat",
+        "provinsi": "Sumatera Barat",
         "kabupaten": "Lima Puluh Kota",
         "items": [
             {
@@ -2214,7 +2214,7 @@ const seedData = [
     },
     {
         "id": "sumatera_barat-mentawai",
-        "provinsi": "Provinsi Sumatera Barat",
+        "provinsi": "Sumatera Barat",
         "kabupaten": "Mentawai",
         "items": [
             {
