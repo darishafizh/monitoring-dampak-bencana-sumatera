@@ -154,7 +154,24 @@
             <h2 class="page-title">Rencana Aksi Rehabilitasi</h2>
             <p class="page-desc">Detail rencana rehabilitasi dan rekonstruksi per lokasi, sektor, dan tahun anggaran</p>
           </div>
-          <div class="pills" id="rencanaPills"></div>
+          <div class="kpi-row" style="grid-template-columns: repeat(2, 1fr)">
+            <div class="kpi anim">
+              <div class="kpi-top">
+                <div class="kpi-label">Total Rencana Aksi</div>
+                <div class="kpi-icon"><i class="fa-solid fa-list-check"></i></div>
+              </div>
+              <div class="kpi-val" id="k-rencana-count">—</div>
+              <div class="kpi-sub">Program/Kegiatan (filter aktif)</div>
+            </div>
+            <div class="kpi anim">
+              <div class="kpi-top">
+                <div class="kpi-label">Total Anggaran</div>
+                <div class="kpi-icon"><i class="fa-solid fa-coins"></i></div>
+              </div>
+              <div class="kpi-val" id="k-rencana-ang">—</div>
+              <div class="kpi-sub">Berdasarkan filter aktif</div>
+            </div>
+          </div>
           <div class="tbl-card">
             <div class="tbl-head">
               <div class="tbl-title">Data Rencana Aksi</div>

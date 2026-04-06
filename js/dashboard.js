@@ -314,13 +314,12 @@ function renderRencanaTable() {
     return true;
   });
 
-  // Pills
-  document.getElementById('rencanaPills').innerHTML =
-    `<div class="pill"><i class="fa-solid fa-list-check" style="color:var(--kkp-blue)"></i> Total: <b>${data.length}</b> rencana aksi</div>` +
-    `<div class="pill"><i class="fa-solid fa-coins" style="color:var(--kkp-gold)"></i> Total: <b>${fmtRp(
-      data.reduce((s, r) => s + (r.total_anggaran || 0), 0),
-      false,
-    )}</b></div>`;
+  // Update KPI cards
+  document.getElementById('k-rencana-count').textContent = data.length.toLocaleString('id-ID');
+  document.getElementById('k-rencana-ang').textContent = fmtRp(
+    data.reduce((s, r) => s + (r.total_anggaran || 0), 0),
+    false,
+  );
 
   const tp = Math.max(1, Math.ceil(data.length / PG));
   rPage = Math.min(rPage, tp);
