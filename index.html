@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Dashboard Rehabilitasi dan Rekonstruksi Pascabencana Alam Sumatera - Kementerian Kelautan dan Perikanan" />
+    <title>Dashboard Pascabencana Sumatera — KKP</title>
+    <link rel="icon" href="images/logo-kkp.png" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  </head>
+  <body>
+    <!-- TOP NAVIGATION -->
+    <header class="topnav" id="topnav">
+      <div class="topnav-brand">
+        <img src="images/logo-kkp.png" alt="Logo KKP" />
+        <div class="topnav-brand-text">
+          Dashboard KKP
+          <span>Pascabencana Sumatera</span>
+        </div>
+      </div>
+
+      <button class="hamburger" id="hamburgerBtn" onclick="document.getElementById('topnav-menu').classList.toggle('open')">☰</button>
+
+      <nav class="topnav-menu" id="topnav-menu">
+        <div class="nav-item active" data-page="overview"><span class="nav-icon">📊</span> Overview</div>
+        <div class="nav-item" data-page="rencana-aksi"><span class="nav-icon">📋</span> Rencana Aksi</div>
+        <div class="nav-item" data-page="dampak"><span class="nav-icon">⚠️</span> Data Dampak</div>
+        <div class="nav-item" data-page="anggaran"><span class="nav-icon">💰</span> Anggaran</div>
+      </nav>
+
+      <div class="topnav-filters">
+        <span class="filter-tag">Provinsi</span>
+        <select class="filter-select" id="fProv">
+          <option value="semua">Semua Provinsi</option>
+          <option value="aceh">Aceh</option>
+          <option value="sumut">Sumatera Utara</option>
+          <option value="sumbar">Sumatera Barat</option>
+        </select>
+        <span class="filter-tag">Tahun</span>
+        <select class="filter-select" id="fYear">
+          <option value="semua">Semua Tahun</option>
+          <option value="2026">2026</option>
+          <option value="2027">2027</option>
+          <option value="2028">2028</option>
+        </select>
+      </div>
+    </header>
+
+    <!-- MAIN -->
+    <div class="main">
+      <div class="topnav-bar">
+        <h1 id="pageTitle">Overview</h1>
+      </div>
+
+      <div class="content">
+        <!-- === OVERVIEW === -->
+        <div class="page active" id="p-overview">
+          <div class="page-header">
+            <h2 class="page-title">Ringkasan Pascabencana Sumatera</h2>
+            <p class="page-desc">Data rencana rehabilitasi dan rekonstruksi pascabencana alam Sumatera oleh Kementerian Kelautan dan Perikanan</p>
+          </div>
+
+          <div class="kpi-row">
+            <div class="kpi anim">
+              <div class="kpi-top">
+                <div class="kpi-label">Total Anggaran</div>
+                <div class="kpi-icon">💰</div>
+              </div>
+              <div class="kpi-val" id="k-ang">—</div>
+              <div class="kpi-sub">Rencana 2026–2028</div>
+            </div>
+            <div class="kpi anim">
+              <div class="kpi-top">
+                <div class="kpi-label">Kab/Kota Terdampak</div>
+                <div class="kpi-icon">📍</div>
+              </div>
+              <div class="kpi-val" id="k-kab">—</div>
+              <div class="kpi-sub">Kabupaten/Kota</div>
+            </div>
+            <div class="kpi anim">
+              <div class="kpi-top">
+                <div class="kpi-label">Total Program</div>
+                <div class="kpi-icon">📋</div>
+              </div>
+              <div class="kpi-val" id="k-prog">—</div>
+              <div class="kpi-sub">Program/Kegiatan</div>
+            </div>
+            <div class="kpi anim">
+              <div class="kpi-top">
+                <div class="kpi-label">Item Terdampak</div>
+                <div class="kpi-icon">⚠️</div>
+              </div>
+              <div class="kpi-val" id="k-dmpk">—</div>
+              <div class="kpi-sub">Total item terdampak</div>
+            </div>
+          </div>
+
+          <div class="grid c13">
+            <div class="card anim">
+              <div class="card-head">
+                <div class="card-title">Distribusi Sektor</div>
+                <div class="card-sub">Proporsi anggaran per sektor pemulihan</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-box h280"><canvas id="chSektor"></canvas></div>
+              </div>
+            </div>
+            <div class="card anim">
+              <div class="card-head">
+                <div class="card-title">Anggaran per Provinsi per Tahun</div>
+                <div class="card-sub">Distribusi anggaran (Miliar Rupiah)</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-box h280"><canvas id="chProvTahun"></canvas></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid c2">
+            <div class="card anim">
+              <div class="card-head">
+                <div class="card-title">Top Program berdasarkan Anggaran</div>
+                <div class="card-sub">Program dengan alokasi terbesar (Miliar Rp)</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-box h320"><canvas id="chTopProg"></canvas></div>
+              </div>
+            </div>
+            <div class="card anim">
+              <div class="card-head">
+                <div class="card-title">Ringkasan per Provinsi</div>
+                <div class="card-sub">Total anggaran dan program tiap provinsi</div>
+              </div>
+              <div class="card-body" style="padding-top: var(--sp-4)">
+                <table class="tbl" id="tblProvSummary">
+                  <thead>
+                    <tr>
+                      <th>Provinsi</th>
+                      <th class="num">Total Anggaran</th>
+                      <th class="num">Kab/Kota</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- === RENCANA AKSI === -->
+        <div class="page" id="p-rencana-aksi">
+          <div class="page-header">
+            <h2 class="page-title">Rencana Aksi Rehabilitasi</h2>
+            <p class="page-desc">Detail rencana rehabilitasi dan rekonstruksi per lokasi, sektor, dan tahun anggaran</p>
+          </div>
+          <div class="pills" id="rencanaPills"></div>
+          <div class="tbl-card">
+            <div class="tbl-head">
+              <div class="tbl-title">Data Rencana Aksi</div>
+              <div class="tbl-actions">
+                <select class="filter-select" id="fSektor" style="min-width: 150px">
+                  <option value="semua">Semua Sektor</option>
+                </select>
+                <div class="search-box"><input type="text" id="sRencana" placeholder="Cari rencana aksi…" /></div>
+              </div>
+            </div>
+            <div class="tbl-wrap">
+              <table class="tbl" id="tblRencana">
+                <thead>
+                  <tr>
+                    <th style="width: 36px">No</th>
+                    <th>Rencana Aksi</th>
+                    <th>Sektor</th>
+                    <th>Provinsi</th>
+                    <th>Kab/Kota</th>
+                    <th class="num">2026</th>
+                    <th class="num">2027</th>
+                    <th class="num">2028</th>
+                    <th class="num">Total</th>
+                    <th>Sumber Dana</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div class="tbl-foot">
+              <span id="rencanaInfo">—</span>
+              <div class="paging" id="rencanaPag"></div>
+            </div>
+          </div>
+          <div class="grid c2">
+            <div class="card">
+              <div class="card-head">
+                <div class="card-title">Distribusi Sumber Dana</div>
+                <div class="card-sub">Proporsi anggaran berdasarkan sumber</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-box h280"><canvas id="chSumber"></canvas></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-head">
+                <div class="card-title">Rencana Aksi per Kab/Kota</div>
+                <div class="card-sub">Top 10 kabupaten/kota</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-box h280"><canvas id="chAksiKab"></canvas></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- === DATA DAMPAK === -->
+        <div class="page" id="p-dampak">
+          <div class="page-header">
+            <h2 class="page-title">Data Dampak Bencana</h2>
+            <p class="page-desc">Rekapitulasi dampak bencana dan tingkat kerusakan per wilayah</p>
+          </div>
+          <div class="kpi-row">
+            <div class="kpi anim">
+              <div class="kpi-top">
+                <div class="kpi-label">Rusak Ringan</div>
+                <div class="kpi-icon">🟡</div>
+              </div>
+              <div class="kpi-val" id="k-rr">—</div>
+              <div class="kpi-sub">Item</div>
+            </div>
+            <div class="kpi anim">
+              <div class="kpi-top">
+                <div class="kpi-label">Rusak Sedang</div>
+                <div class="kpi-icon">🟠</div>
+              </div>
+              <div class="kpi-val" id="k-rs">—</div>
+              <div class="kpi-sub">Item</div>
+            </div>
+            <div class="kpi anim">
+              <div class="kpi-top">
+                <div class="kpi-label">Rusak Berat</div>
+                <div class="kpi-icon">🔴</div>
+              </div>
+              <div class="kpi-val" id="k-rb">—</div>
+              <div class="kpi-sub">Item</div>
+            </div>
+            <div class="kpi anim">
+              <div class="kpi-top">
+                <div class="kpi-label">Hilang</div>
+                <div class="kpi-icon">⬛</div>
+              </div>
+              <div class="kpi-val" id="k-h">—</div>
+              <div class="kpi-sub">Item</div>
+            </div>
+          </div>
+          <div class="grid c2">
+            <div class="card">
+              <div class="card-head">
+                <div class="card-title">Dampak per Unit Kerja</div>
+                <div class="card-sub">Distribusi berdasarkan unit kerja KKP</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-box h280"><canvas id="chBagian"></canvas></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-head">
+                <div class="card-title">Tingkat Kerusakan per Kab/Kota</div>
+                <div class="card-sub">Breakdown di setiap kabupaten/kota</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-box h280"><canvas id="chKerusakan"></canvas></div>
+              </div>
+            </div>
+          </div>
+          <div class="tbl-card">
+            <div class="tbl-head">
+              <div class="tbl-title">Detail Data Dampak</div>
+              <div class="tbl-actions">
+                <select class="filter-select" id="fBagian" style="min-width: 140px">
+                  <option value="semua">Semua Unit Kerja</option>
+                </select>
+                <div class="search-box"><input type="text" id="sDampak" placeholder="Cari dampak…" /></div>
+              </div>
+            </div>
+            <div class="tbl-wrap">
+              <table class="tbl" id="tblDampak">
+                <thead>
+                  <tr>
+                    <th>Unit Kerja</th>
+                    <th>Provinsi</th>
+                    <th>Kabupaten</th>
+                    <th>Dampak</th>
+                    <th class="num">Jumlah</th>
+                    <th>Satuan</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div class="tbl-foot">
+              <span id="dampakInfo">—</span>
+              <div class="paging" id="dampakPag"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- === ANGGARAN === -->
+        <div class="page" id="p-anggaran">
+          <div class="page-header">
+            <h2 class="page-title">Analisis Anggaran</h2>
+            <p class="page-desc">Perbandingan APBN reguler dan tambahan serta tren anggaran per tahun</p>
+          </div>
+          <div class="kpi-row" style="grid-template-columns: repeat(3, 1fr)">
+            <div class="kpi anim">
+              <div class="kpi-top">
+                <div class="kpi-label">APBN Reguler</div>
+                <div class="kpi-icon">🏛️</div>
+              </div>
+              <div class="kpi-val" id="k-reg">—</div>
+              <div class="kpi-sub">Anggaran eksisting</div>
+            </div>
+            <div class="kpi anim">
+              <div class="kpi-top">
+                <div class="kpi-label">APBN Tambahan</div>
+                <div class="kpi-icon">📦</div>
+              </div>
+              <div class="kpi-val" id="k-tam">—</div>
+              <div class="kpi-sub">On top untuk bantuan</div>
+            </div>
+            <div class="kpi anim">
+              <div class="kpi-top">
+                <div class="kpi-label">Total Gabungan</div>
+                <div class="kpi-icon">💎</div>
+              </div>
+              <div class="kpi-val" id="k-gab">—</div>
+              <div class="kpi-sub">Reguler + Tambahan</div>
+            </div>
+          </div>
+          <div class="grid c2">
+            <div class="card">
+              <div class="card-head">
+                <div class="card-title">APBN Reguler vs Tambahan</div>
+                <div class="card-sub">Perbandingan per provinsi (Miliar Rp)</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-box h280"><canvas id="chAPBN"></canvas></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-head">
+                <div class="card-title">Tren Anggaran 2026–2028</div>
+                <div class="card-sub">Perkembangan per provinsi (Miliar Rp)</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-box h280"><canvas id="chTren"></canvas></div>
+              </div>
+            </div>
+          </div>
+          <div class="tbl-card">
+            <div class="tbl-head"><div class="tbl-title">Detail Anggaran per Program</div></div>
+            <div class="tbl-wrap">
+              <table class="tbl" id="tblAnggaran">
+                <thead>
+                  <tr>
+                    <th style="width: 36px">No</th>
+                    <th>Program/Kegiatan</th>
+                    <th class="num">2026 (Rp000)</th>
+                    <th class="num">2027 (Rp000)</th>
+                    <th class="num">2028 (Rp000)</th>
+                    <th class="num">Grand Total</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/data.js"></script>
+    <script src="js/dashboard.js"></script>
+  </body>
+</html>
