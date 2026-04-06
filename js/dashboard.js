@@ -11,7 +11,7 @@ const D = RAW_DATA;
 // ==========================================
 // Chart.js defaults
 // ==========================================
-Chart.defaults.font.family = "'Mulish', sans-serif";
+Chart.defaults.font.family = "'Inter', sans-serif";
 Chart.defaults.font.size = 12;
 Chart.defaults.color = '#4A5568';
 Chart.defaults.plugins.legend.labels.usePointStyle = true;
@@ -61,9 +61,6 @@ function setupNav() {
       const p = el.dataset.page;
       document.querySelectorAll('.nav-item[data-page]').forEach((n) => n.classList.toggle('active', n.dataset.page === p));
       document.querySelectorAll('.page').forEach((pg) => pg.classList.toggle('active', pg.id === 'p-' + p));
-      const t = { overview: 'Overview', 'rencana-aksi': 'Rencana Aksi', dampak: 'Data Dampak', anggaran: 'Anggaran' };
-      document.getElementById('pageTitle').textContent = t[p] || 'Dashboard';
-      document.getElementById('sidebar').classList.remove('open');
     });
   });
 }
@@ -319,8 +316,8 @@ function renderRencanaTable() {
 
   // Pills
   document.getElementById('rencanaPills').innerHTML =
-    `<div class="pill">📋 Total: <b>${data.length}</b> rencana aksi</div>` +
-    `<div class="pill">💰 Total: <b>${fmtRp(
+    `<div class="pill"><i class="fa-solid fa-list-check" style="color:var(--kkp-blue)"></i> Total: <b>${data.length}</b> rencana aksi</div>` +
+    `<div class="pill"><i class="fa-solid fa-coins" style="color:var(--kkp-gold)"></i> Total: <b>${fmtRp(
       data.reduce((s, r) => s + (r.total_anggaran || 0), 0),
       false,
     )}</b></div>`;

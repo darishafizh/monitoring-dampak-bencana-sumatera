@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" />
     <link rel="stylesheet" href="css/styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   </head>
@@ -23,13 +24,13 @@
         </div>
       </div>
 
-      <button class="hamburger" id="hamburgerBtn" onclick="document.getElementById('topnav-menu').classList.toggle('open')">☰</button>
+      <button class="hamburger" id="hamburgerBtn" onclick="document.getElementById('topnav-menu').classList.toggle('open')"><i class="fa-solid fa-bars"></i></button>
 
       <nav class="topnav-menu" id="topnav-menu">
-        <div class="nav-item active" data-page="overview"><span class="nav-icon">📊</span> Overview</div>
-        <div class="nav-item" data-page="rencana-aksi"><span class="nav-icon">📋</span> Rencana Aksi</div>
-        <div class="nav-item" data-page="dampak"><span class="nav-icon">⚠️</span> Data Dampak</div>
-        <div class="nav-item" data-page="anggaran"><span class="nav-icon">💰</span> Anggaran</div>
+        <div class="nav-item active" data-page="overview"><span class="nav-icon"><i class="fa-solid fa-chart-bar"></i></span> Overview</div>
+        <div class="nav-item" data-page="rencana-aksi"><span class="nav-icon"><i class="fa-solid fa-clipboard-list"></i></span> Rencana Aksi</div>
+        <div class="nav-item" data-page="dampak"><span class="nav-icon"><i class="fa-solid fa-triangle-exclamation"></i></span> Data Dampak</div>
+        <div class="nav-item" data-page="anggaran"><span class="nav-icon"><i class="fa-solid fa-coins"></i></span> Anggaran</div>
       </nav>
 
       <div class="topnav-filters">
@@ -52,10 +53,6 @@
 
     <!-- MAIN -->
     <div class="main">
-      <div class="topnav-bar">
-        <h1 id="pageTitle">Overview</h1>
-      </div>
-
       <div class="content">
         <!-- === OVERVIEW === -->
         <div class="page active" id="p-overview">
@@ -68,7 +65,7 @@
             <div class="kpi anim">
               <div class="kpi-top">
                 <div class="kpi-label">Total Anggaran</div>
-                <div class="kpi-icon">💰</div>
+                <div class="kpi-icon"><i class="fa-solid fa-coins"></i></div>
               </div>
               <div class="kpi-val" id="k-ang">—</div>
               <div class="kpi-sub">Rencana 2026–2028</div>
@@ -76,7 +73,7 @@
             <div class="kpi anim">
               <div class="kpi-top">
                 <div class="kpi-label">Kab/Kota Terdampak</div>
-                <div class="kpi-icon">📍</div>
+                <div class="kpi-icon"><i class="fa-solid fa-location-dot"></i></div>
               </div>
               <div class="kpi-val" id="k-kab">—</div>
               <div class="kpi-sub">Kabupaten/Kota</div>
@@ -84,7 +81,7 @@
             <div class="kpi anim">
               <div class="kpi-top">
                 <div class="kpi-label">Total Program</div>
-                <div class="kpi-icon">📋</div>
+                <div class="kpi-icon"><i class="fa-solid fa-clipboard-list"></i></div>
               </div>
               <div class="kpi-val" id="k-prog">—</div>
               <div class="kpi-sub">Program/Kegiatan</div>
@@ -92,7 +89,7 @@
             <div class="kpi anim">
               <div class="kpi-top">
                 <div class="kpi-label">Item Terdampak</div>
-                <div class="kpi-icon">⚠️</div>
+                <div class="kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
               </div>
               <div class="kpi-val" id="k-dmpk">—</div>
               <div class="kpi-sub">Total item terdampak</div>
@@ -224,7 +221,7 @@
             <div class="kpi anim">
               <div class="kpi-top">
                 <div class="kpi-label">Rusak Ringan</div>
-                <div class="kpi-icon">🟡</div>
+                <div class="kpi-icon" style="color:#eab308"><i class="fa-solid fa-circle"></i></div>
               </div>
               <div class="kpi-val" id="k-rr">—</div>
               <div class="kpi-sub">Item</div>
@@ -232,7 +229,7 @@
             <div class="kpi anim">
               <div class="kpi-top">
                 <div class="kpi-label">Rusak Sedang</div>
-                <div class="kpi-icon">🟠</div>
+                <div class="kpi-icon" style="color:#f97316"><i class="fa-solid fa-circle"></i></div>
               </div>
               <div class="kpi-val" id="k-rs">—</div>
               <div class="kpi-sub">Item</div>
@@ -240,7 +237,7 @@
             <div class="kpi anim">
               <div class="kpi-top">
                 <div class="kpi-label">Rusak Berat</div>
-                <div class="kpi-icon">🔴</div>
+                <div class="kpi-icon" style="color:#ef4444"><i class="fa-solid fa-circle"></i></div>
               </div>
               <div class="kpi-val" id="k-rb">—</div>
               <div class="kpi-sub">Item</div>
@@ -248,7 +245,7 @@
             <div class="kpi anim">
               <div class="kpi-top">
                 <div class="kpi-label">Hilang</div>
-                <div class="kpi-icon">⬛</div>
+                <div class="kpi-icon" style="color:#374151"><i class="fa-solid fa-circle-xmark"></i></div>
               </div>
               <div class="kpi-val" id="k-h">—</div>
               <div class="kpi-sub">Item</div>
@@ -316,7 +313,7 @@
             <div class="kpi anim">
               <div class="kpi-top">
                 <div class="kpi-label">APBN Reguler</div>
-                <div class="kpi-icon">🏛️</div>
+                <div class="kpi-icon"><i class="fa-solid fa-landmark"></i></div>
               </div>
               <div class="kpi-val" id="k-reg">—</div>
               <div class="kpi-sub">Anggaran eksisting</div>
@@ -324,7 +321,7 @@
             <div class="kpi anim">
               <div class="kpi-top">
                 <div class="kpi-label">APBN Tambahan</div>
-                <div class="kpi-icon">📦</div>
+                <div class="kpi-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
               </div>
               <div class="kpi-val" id="k-tam">—</div>
               <div class="kpi-sub">On top untuk bantuan</div>
@@ -332,7 +329,7 @@
             <div class="kpi anim">
               <div class="kpi-top">
                 <div class="kpi-label">Total Gabungan</div>
-                <div class="kpi-icon">💎</div>
+                <div class="kpi-icon"><i class="fa-solid fa-layer-group"></i></div>
               </div>
               <div class="kpi-val" id="k-gab">—</div>
               <div class="kpi-sub">Reguler + Tambahan</div>
