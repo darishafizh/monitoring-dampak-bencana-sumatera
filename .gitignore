@@ -1,0 +1,18 @@
+﻿
+# File temp Microsoft Office
+~$*
+*.tmp
+
+# File temp Python / output debug
+*.pyc
+__pycache__/
+output_*.txt
+preview_*.txt
+preview_*.json
+verify_*.py
+verify_*.txt
+explore_data*.py
+data_preview.json
+
+# File Node
+node_modules/

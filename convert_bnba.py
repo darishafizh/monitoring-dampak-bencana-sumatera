@@ -30,26 +30,28 @@ print(f"DJPK columns: {df_djpk.columns.tolist()}")
 
 djpk_data = []
 for _, row in df_djpk.iterrows():
-    no = clean_str(row.iloc[0]) if pd.notna(row.iloc[0]) else ''
-    prov = clean_str(row.iloc[1]) if pd.notna(row.iloc[1]) else ''
-    # Skip rows yang tidak ada No atau Propinsi
-    if not prov or (not no and not prov):
+    # iloc[0] = Unnamed:0 (kolom kosong), mulai data dari iloc[1]
+    no  = clean_str(row.iloc[1]) if pd.notna(row.iloc[1]) else ''
+    prov = clean_str(row.iloc[2]) if pd.notna(row.iloc[2]) else ''
+    nama_check = clean_str(row.iloc[7]) if pd.notna(row.iloc[7]) else ''
+    # Skip rows yang tidak ada Propinsi dan Nama
+    if not prov and not nama_check:
         continue
-    
+
     item = {
-        'no': clean_str(row.iloc[0]),
-        'provinsi': clean_str(row.iloc[1]),
-        'kab_kota': clean_str(row.iloc[2]),
-        'kecamatan': clean_str(row.iloc[3]),
-        'desa': clean_str(row.iloc[4]),
-        'kelompok': clean_str(row.iloc[5]),
-        'nama': clean_str(row.iloc[6]),
-        'nik': clean_str(row.iloc[7]),
-        'jk': clean_str(row.iloc[8]),
-        'luas_lahan': clean_num(row.iloc[9]),
-        'metode_produksi': clean_str(row.iloc[10]),
-        'nilai_kerusakan': clean_num(row.iloc[11]),
-        'ket': clean_str(row.iloc[12]) if len(row) > 12 else '',
+        'no':              clean_str(row.iloc[1]),   # No
+        'provinsi':        clean_str(row.iloc[2]),   # Propinsi
+        'kab_kota':        clean_str(row.iloc[3]),   # Kab/Kota
+        'kecamatan':       clean_str(row.iloc[4]),   # Kecamatan
+        'desa':            clean_str(row.iloc[5]),   # Desa
+        'kelompok':        clean_str(row.iloc[6]),   # Kelompok
+        'nama':            clean_str(row.iloc[7]),   # Nama Petambak
+        'nik':             clean_str(row.iloc[8]),   # Nik
+        'jk':              clean_str(row.iloc[9]),   # Jenis Kelamin
+        'luas_lahan':      clean_num(row.iloc[10]),  # Luas Lahan (M2)
+        'metode_produksi': clean_str(row.iloc[11]),  # Metode Produksi  ← BENAR
+        'nilai_kerusakan': clean_num(row.iloc[12]),  # Nilai Kerusakan (Rp)
+        'ket':             clean_str(row.iloc[13]) if len(row) > 13 else '',  # Ket
         'jenis': 'garam'
     }
     djpk_data.append(item)
