@@ -41,7 +41,8 @@ const C = {
 let charts = {};
 const PG = 15;
 let rPage = 1,
-  dPage = 1;
+  dPage = 1,
+  bPage = 1;
 
 // ==========================================
 // INIT
@@ -50,6 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupNav();
   setupFilters();
   render();
+  renderPenerima();
 });
 
 // ==========================================
@@ -61,6 +63,7 @@ function setupNav() {
       const p = el.dataset.page;
       document.querySelectorAll('.nav-item[data-page]').forEach((n) => n.classList.toggle('active', n.dataset.page === p));
       document.querySelectorAll('.page').forEach((pg) => pg.classList.toggle('active', pg.id === 'p-' + p));
+      document.getElementById('topnav').classList.remove('open');
     });
   });
 }
@@ -94,6 +97,15 @@ function setupFilters() {
       dPage = 1;
       renderDampakTable();
     }, 250);
+  });
+
+  // BNBA filters
+  document.getElementById('fJenis').addEventListener('change', () => { bPage = 1; renderBnbaTable(); });
+  document.getElementById('fProvBnba').addEventListener('change', () => { bPage = 1; renderBnbaTable(); });
+  let t3;
+  document.getElementById('sBnba').addEventListener('input', () => {
+    clearTimeout(t3);
+    t3 = setTimeout(() => { bPage = 1; renderBnbaTable(); }, 250);
   });
 }
 
@@ -627,6 +639,182 @@ function renderAnggaranTable() {
     <td class="cur bold">${fmtRp(g28, true)}</td>
     <td class="cur bold" style="color:var(--kkp-blue-dark)">${fmtRp(g26 + g27 + g28, true)}</td>
   </tr>`;
+}
+
+// ==========================================
+// PENERIMA BANTUAN (BNBA)
+// ==========================================
+function renderPenerima() {
+  if (typeof BNBA_DATA === 'undefined') return;
+  renderBnbaKPIs();
+  renderBnbaCharts();
+  renderBnbaTable();
+}
+
+function renderBnbaKPIs() {
+  const pds = BNBA_DATA.pds;
+  const djpk = BNBA_DATA.djpk;
+  const total = pds.length + djpk.length;
+  const berat = pds.filter(r => r.rusak_berat || r.hilang).length;
+  document.getElementById('k-bnba-total').textContent = fmtN(total);
+  document.getElementById('k-bnba-pds').textContent = fmtN(pds.length);
+  document.getElementById('k-bnba-djpk').textContent = fmtN(djpk.length);
+  document.getElementById('k-bnba-berat').textContent = fmtN(berat);
+}
+
+function renderBnbaCharts() {
+  const pds = BNBA_DATA.pds;
+  const djpk = BNBA_DATA.djpk;
+
+  // ---- Chart 1: Penerima per Provinsi (grouped bar) ----
+  const provPds = {};
+  pds.forEach(r => { const k = r.provinsi || 'Lainnya'; provPds[k] = (provPds[k] || 0) + 1; });
+  const provDjpk = {};
+  djpk.forEach(r => {
+    const p = (r.provinsi || 'Lainnya').toUpperCase();
+    provDjpk[p] = (provDjpk[p] || 0) + 1;
+  });
+  const allProv = [...new Set([...Object.keys(provPds), ...Object.keys(provDjpk)])].sort();
+  mkChart('chBnbaProv', 'bar',
+    {
+      labels: allProv.map(p => p.length > 18 ? p.slice(0,18)+'…' : p),
+      datasets: [
+        { label: 'Perikanan (PDS)', data: allProv.map(p => provPds[p] || 0), backgroundColor: C.teal + 'CC', borderColor: C.teal, borderWidth: 1 },
+        { label: 'Garam (DJPK)',    data: allProv.map(p => provDjpk[p] || 0), backgroundColor: C.gold + 'CC', borderColor: C.gold, borderWidth: 1 },
+      ]
+    },
+    { scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { grid: { color: '#EDF2F7' }, title: { display: true, text: 'Jumlah Penerima' } } } }
+  );
+
+  // ---- Chart 2: Tingkat Kerusakan PDS ----
+  let rrC = 0, rsC = 0, rbC = 0, hlC = 0;
+  pds.forEach(r => {
+    rrC += r.rusak_ringan || 0;
+    rsC += r.rusak_sedang || 0;
+    rbC += r.rusak_berat || 0;
+    hlC += r.hilang || 0;
+  });
+  mkChart('chBnbaKerusakan', 'doughnut',
+    {
+      labels: ['Rusak Ringan', 'Rusak Sedang', 'Rusak Berat', 'Hilang'],
+      datasets: [{ data: [rrC, rsC, rbC, hlC], backgroundColor: [C.warnL, C.warn, C.danger, '#455A64'], borderWidth: 0, hoverOffset: 6 }]
+    },
+    { cutout: '62%', plugins: { legend: { position: 'bottom', labels: { padding: 10, font: { size: 11 } } }, tooltip: { callbacks: { label: c => c.label + ': ' + c.formattedValue + ' unit' } } } }
+  );
+
+  // ---- Chart 3: Top Fasilitas Terdampak ----
+  const fasMap = {};
+  pds.forEach(r => {
+    if (!r.fasilitas) return;
+    // Ambil bagian pertama sebelum tanda kurung / untuk menyingkat
+    const key = r.fasilitas.split('/')[0].split('(')[0].trim().slice(0, 45);
+    fasMap[key] = (fasMap[key] || 0) + 1;
+  });
+  const fasE = Object.entries(fasMap).sort((a,b) => b[1]-a[1]).slice(0, 8);
+  mkChart('chBnbaFasilitas', 'bar',
+    {
+      labels: fasE.map(([k]) => k.length > 30 ? k.slice(0,30)+'…' : k),
+      datasets: [{ data: fasE.map(([,v]) => v), backgroundColor: C.pal.slice(0,fasE.length).map(c => c+'CC'), borderColor: C.pal.slice(0,fasE.length), borderWidth: 1 }]
+    },
+    { indexAxis: 'y', scales: { x: { grid: { color: '#EDF2F7' } }, y: { grid: { display: false }, ticks: { font: { size: 10 } } } }, plugins: { legend: { display: false } } }
+  );
+
+  // ---- Chart 4: Metode Produksi Garam ----
+  const metMap = {};
+  djpk.forEach(r => {
+    const k = r.metode_produksi || 'Tidak Diketahui';
+    metMap[k] = (metMap[k] || 0) + 1;
+  });
+  const metE = Object.entries(metMap).sort((a,b) => b[1]-a[1]);
+  mkChart('chBnbaMetode', 'doughnut',
+    {
+      labels: metE.map(([k]) => k.length > 28 ? k.slice(0,28)+'…' : k),
+      datasets: [{ data: metE.map(([,v]) => v), backgroundColor: C.pal.slice(0,metE.length), borderWidth: 0, hoverOffset: 6 }]
+    },
+    { cutout: '58%', plugins: { legend: { position: 'bottom', labels: { padding: 8, font: { size: 10 } } } } }
+  );
+}
+
+function bnbaKelompok(r) {
+  if (r.jenis === 'garam') return r.kelompok || '—';
+  return r.nomor_kusuka || '—';
+}
+
+function bnbaFasilitas(r) {
+  if (r.jenis === 'garam') return r.metode_produksi || '—';
+  return (r.fasilitas || '').slice(0, 40) + ((r.fasilitas || '').length > 40 ? '…' : '') || '—';
+}
+
+function bnbaKerusakan(r) {
+  if (r.jenis === 'garam') {
+    const v = r.nilai_kerusakan;
+    return v ? fmtRp(v, false) : '—';
+  }
+  const t = r.tingkat_kerusakan;
+  if (!t || t === '-') return '<span style="color:var(--text-light)">—</span>';
+  const cls = t === 'Rusak Ringan' ? 'badge-warn-l' : t === 'Rusak Sedang' ? 'badge-warn' : t === 'Rusak Berat' ? 'badge-danger' : 'badge-dark';
+  return `<span class="badge ${cls}">${t}</span>`;
+}
+
+function renderBnbaTable() {
+  if (typeof BNBA_DATA === 'undefined') return;
+  const jenis = document.getElementById('fJenis').value;
+  const prov = document.getElementById('fProvBnba').value;
+  const q = document.getElementById('sBnba').value.toLowerCase();
+
+  // Gabungkan PDS dan DJPK berdasarkan filter
+  let all = [];
+  if (jenis === 'semua' || jenis === 'perikanan') all = all.concat(BNBA_DATA.pds);
+  if (jenis === 'semua' || jenis === 'garam') all = all.concat(BNBA_DATA.djpk);
+
+  // Filter provinsi
+  if (prov !== 'semua') {
+    all = all.filter(r => (r.provinsi || '').toUpperCase().includes(prov.toUpperCase()));
+  }
+
+  // Filter search
+  if (q) {
+    all = all.filter(r =>
+      (r.nama || '').toLowerCase().includes(q) ||
+      (r.kelompok || '').toLowerCase().includes(q) ||
+      (r.nomor_kusuka || '').toLowerCase().includes(q) ||
+      (r.kab_kota || '').toLowerCase().includes(q) ||
+      (r.kecamatan || '').toLowerCase().includes(q) ||
+      (r.desa || '').toLowerCase().includes(q)
+    );
+  }
+
+  const tp = Math.max(1, Math.ceil(all.length / PG));
+  bPage = Math.min(bPage, tp);
+  const st = (bPage - 1) * PG;
+  const pg = all.slice(st, st + PG);
+
+  const tb = document.querySelector('#tblBnba tbody');
+  tb.innerHTML = '';
+  if (!pg.length) {
+    tb.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:var(--sp-8);color:var(--text-muted)">Tidak ada data ditemukan</td></tr>';
+  } else {
+    pg.forEach((r, i) => {
+      const jenisLabel = r.jenis === 'garam'
+        ? '<span class="badge badge-gold">Garam</span>'
+        : '<span class="badge badge-teal">Perikanan</span>';
+      tb.innerHTML += `<tr>
+        <td style="color:var(--text-light)">${st+i+1}</td>
+        <td>${provBadge(r.provinsi)}</td>
+        <td>${r.kab_kota || '—'}</td>
+        <td>${r.kecamatan || '—'}</td>
+        <td style="max-width:180px;font-weight:500">${r.nama || '—'}<br><small style="color:var(--text-light);font-size:11px">${jenisLabel}</small></td>
+        <td style="font-size:11px;color:var(--text-muted)">${bnbaKelompok(r)}</td>
+        <td style="max-width:180px;font-size:12px">${bnbaFasilitas(r)}</td>
+        <td>${bnbaKerusakan(r)}</td>
+        <td>${r.kewenangan || r.ket || '—'}</td>
+      </tr>`;
+    });
+  }
+
+  document.getElementById('bnbaInfo').textContent =
+    `Menampilkan ${st+1}–${Math.min(st+PG, all.length)} dari ${all.length.toLocaleString('id-ID')} penerima`;
+  mkPaging('bnbaPag', bPage, tp, p => { bPage = p; renderBnbaTable(); });
 }
 
 // ==========================================

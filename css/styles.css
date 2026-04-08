@@ -665,10 +665,13 @@ button {
 .badge-sumut { background: #f0fdfa; color: var(--color-sumut); }
 .badge-sumbar { background: #f0fdf4; color: var(--color-sumbar); }
 .badge-blue  { background: var(--kkp-blue-light); color: var(--kkp-blue); }
+.badge-teal  { background: var(--kkp-teal-light); color: var(--kkp-teal); }
 .badge-gold  { background: var(--kkp-gold-light); color: var(--kkp-gold); }
 .badge-warn  { background: var(--color-warning-bg); color: var(--color-warning); }
+.badge-warn-l { background: #fff7ed; color: #ea580c; }
 .badge-danger { background: var(--color-danger-bg); color: var(--color-danger); }
 .badge-success { background: var(--color-success-bg); color: var(--color-success); }
+.badge-dark  { background: #f1f5f9; color: #475569; }
 
 /* ============================================
    PAGINATION
@@ -795,10 +798,8 @@ button {
   .kpi-row {
     grid-template-columns: repeat(2, 1fr);
   }
-  .grid.c2,
-  .grid.c3,
-  .grid.c13 {
-    grid-template-columns: 1fr;
+  .grid.c3 {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -815,6 +816,13 @@ button {
   }
   .topnav-filters {
     display: none;
+    width: 100%;
+    padding: var(--sp-3) 0 0;
+    margin-left: 0;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
   .hamburger {
     display: flex;
@@ -829,12 +837,18 @@ button {
     padding: var(--sp-2) 0;
     border-top: 1px solid var(--border);
   }
-  .topnav-menu.open {
+  .topnav.open .topnav-menu,
+  .topnav.open .topnav-filters {
     display: flex;
   }
   .nav-item {
     width: 100%;
     border-radius: var(--r-md);
+  }
+  .grid.c2,
+  .grid.c3,
+  .grid.c13 {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -857,11 +871,35 @@ button {
   .tbl-actions {
     width: 100%;
     flex-wrap: wrap;
+    gap: var(--sp-2);
   }
-  .search-box input {
+  .search-box {
     width: 100%;
   }
+  .search-box input,
   .search-box input:focus {
     width: 100%;
+  }
+  .filter-select {
+    flex: 1 1 auto;
+    min-width: 120px;
+  }
+  .tbl-foot {
+    flex-direction: column;
+    align-items: center;
+    gap: var(--sp-3);
+  }
+  .paging {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .chart-box.h280, .chart-box.h320, .chart-box.h360 {
+    height: 240px;
+  }
+  .topnav-brand-text {
+    font-size: var(--fs-sm);
   }
 }
