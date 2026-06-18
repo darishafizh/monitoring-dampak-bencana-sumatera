@@ -103,12 +103,9 @@
                             <th style="width: 40px;">No</th>
                             <th>Program/Kegiatan</th>
                             <th>Sektor</th>
-                            <th>Rencana Aksi</th>
                             <th>Provinsi</th>
-                            <th class="year-column">2026</th>
-                            <th class="year-column">2027</th>
-                            <th class="year-column">2028</th>
-                            <th class="year-column">Total</th>
+                            <th>Total Anggaran</th>
+                            <th style="width: 60px; text-align: center;">Detail</th>
                         </tr>
                     </thead>
                     <tbody id="matrixBody">
@@ -150,7 +147,7 @@
         function renderMatrix() {
             const tbody = document.getElementById('matrixBody');
             if (typeof rencanaIndukData === 'undefined') {
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 2rem;">Data sedang dimuat...</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">Data sedang dimuat...</td></tr>';
                 return;
             }
 
@@ -161,25 +158,103 @@
             });
 
             if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 2rem;">Tidak ada data ditemukan</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">Tidak ada data ditemukan</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = filtered.map((item, index) => `
-                <tr>
+            tbody.innerHTML = filtered.map((item, index) => {
+                const trId = `row-${index}`;
+                const detailId = `detail-${index}`;
+                return `
+                <tr class="expandable-row" onclick="toggleDetail('${detailId}', '${trId}')" id="${trId}">
                     <td>${index + 1}</td>
                     <td><strong>${item.program}</strong></td>
-                    <td>
-                        <span class="sector-badge sector-${item.sektor.toLowerCase()}">${item.sektor}</span>
-                    </td>
-                    <td>${item.rencanaAksi}</td>
+                    <td><span class="sector-badge sector-${item.sektor.toLowerCase()}">${item.sektor}</span></td>
                     <td>${item.provinsi}</td>
-                    <td class="year-column">${formatCurrencyCompact(item.anggaran2026)}</td>
-                    <td class="year-column">${formatCurrencyCompact(item.anggaran2027)}</td>
-                    <td class="year-column">${formatCurrencyCompact(item.anggaran2028)}</td>
-                    <td class="year-column budget-total">${formatCurrencyCompact(item.totalAnggaran)}</td>
+                    <td class="budget-total">${formatCurrencyCompact(item.totalAnggaran)}</td>
+                    <td style="text-align: center;">
+                        <button class="expand-btn" aria-label="Toggle Detail"><i class="fas fa-chevron-down"></i></button>
+                    </td>
                 </tr>
-            `).join('');
+                <tr class="detail-row" id="${detailId}">
+                    <td colspan="6" style="padding: 0;">
+                        <div class="detail-container">
+                            <div class="detail-grid">
+                                <div class="detail-card">
+                                    <h4><i class="fas fa-bullseye"></i> Konteks & Sasaran</h4>
+                                    <div class="detail-field">
+                                        <span class="detail-label">Isu</span>
+                                        <span class="detail-value">${item.isu}</span>
+                                    </div>
+                                    <div class="detail-field">
+                                        <span class="detail-label">Rincian Output (RO)</span>
+                                        <span class="detail-value">${item.ro}</span>
+                                    </div>
+                                    <div class="detail-field">
+                                        <span class="detail-label">Rencana Aksi</span>
+                                        <span class="detail-value">${item.rencanaAksi}</span>
+                                    </div>
+                                    <div class="detail-field">
+                                        <span class="detail-label">Sasaran</span>
+                                        <span class="detail-value">${item.sasaran}</span>
+                                    </div>
+                                </div>
+                                <div class="detail-card">
+                                    <h4><i class="fas fa-map-marker-alt"></i> Lokasi & Pelaksanaan</h4>
+                                    <div class="detail-field">
+                                        <span class="detail-label">Kabupaten/Kota</span>
+                                        <span class="detail-value">${item.kabupaten}</span>
+                                    </div>
+                                    <div class="detail-field">
+                                        <span class="detail-label">Sumber Dana</span>
+                                        <span class="detail-value">${item.sumberDana}</span>
+                                    </div>
+                                    <div class="detail-field">
+                                        <span class="detail-label">Skema</span>
+                                        <span class="detail-value">${item.skema}</span>
+                                    </div>
+                                    <div class="detail-field">
+                                        <span class="detail-label">Mitra</span>
+                                        <span class="detail-value">${item.mitra}</span>
+                                    </div>
+                                </div>
+                                <div class="detail-card">
+                                    <h4><i class="fas fa-calendar-alt"></i> Timeline & Anggaran</h4>
+                                    <div class="budget-timeline">
+                                        <div class="budget-year">
+                                            <span class="budget-year-label">2026</span>
+                                            <span class="budget-year-output">${item.output2026}</span>
+                                            <span class="budget-year-amount">${formatCurrencyCompact(item.anggaran2026)}</span>
+                                        </div>
+                                        <div class="budget-year">
+                                            <span class="budget-year-label">2027</span>
+                                            <span class="budget-year-output">${item.output2027}</span>
+                                            <span class="budget-year-amount">${formatCurrencyCompact(item.anggaran2027)}</span>
+                                        </div>
+                                        <div class="budget-year">
+                                            <span class="budget-year-label">2028</span>
+                                            <span class="budget-year-output">${item.output2028}</span>
+                                            <span class="budget-year-amount">${formatCurrencyCompact(item.anggaran2028)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        function toggleDetail(detailId, rowId) {
+            const detailRow = document.getElementById(detailId);
+            const mainRow = document.getElementById(rowId);
+            if (detailRow.classList.contains('show')) {
+                detailRow.classList.remove('show');
+                mainRow.classList.remove('expanded');
+            } else {
+                detailRow.classList.add('show');
+                mainRow.classList.add('expanded');
+            }
         }
 
         document.getElementById('filterProvinsi').addEventListener('change', (e) => {

@@ -1,557 +1,319 @@
-// ===== Data Management =====
-const STORAGE_KEY = 'budidayaData';
-let currentProvinsiFilter = '';
-let currentUnitFilter = '';
-let currentKategoriFilter = '';
+let map;
+let programChart;
+let provinsiChart;
+let markers = [];
 
-// Initialize localStorage with seedData if empty or outdated
-function initializeData() {
-    // Check if seedData exists (loaded from seed-data.js)
-    if (typeof seedData !== 'undefined' && seedData.length > 0) {
-        // Always reload from seedData to ensure fresh data
-        saveData(seedData);
-        console.log('Data loaded from seed-data.js:', seedData.length, 'entries');
-    }
-}
-
-// Get data from localStorage
-function getData() {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
-}
-
-// Get filtered data
-function getFilteredData() {
-    const data = getData();
-    return data.filter(item => {
-        const matchProvinsi = !currentProvinsiFilter || item.provinsi === currentProvinsiFilter;
-        const matchUnit = !currentUnitFilter || item.items.some(i => i.unit === currentUnitFilter);
-        const matchKategori = !currentKategoriFilter || item.items.some(i => i.kategori === currentKategoriFilter);
-        return matchProvinsi && matchUnit && matchKategori;
-    });
-}
-
-// Save data to localStorage
-function saveData(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-
-// Format currency
-// Format currency
-function formatCurrency(amount) {
+const formatRupiah = (number) => {
     return new Intl.NumberFormat('id-ID', {
         style: 'currency',
         currency: 'IDR',
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
-    }).format(amount);
-}
-
-function formatCurrencyCompact(amount) {
-    if (amount >= 1e12) {
-        return 'Rp ' + (amount / 1e12).toFixed(3).replace('.', ',') + ' T';
-    } else if (amount >= 1e9) {
-        return 'Rp ' + (amount / 1e9).toFixed(3).replace('.', ',') + ' M';
-    } else if (amount >= 1e6) {
-        return 'Rp ' + (amount / 1e6).toFixed(1).replace('.', ',') + ' Jt';
-    } else {
-        return formatCurrency(amount);
-    }
-}
-
-// Format number with thousands separator
-function formatNumber(num) {
-    return new Intl.NumberFormat('id-ID').format(num);
-}
-
-// ===== DOM Elements =====
-const tableBody = document.getElementById('tableBody');
-const emptyState = document.getElementById('emptyState');
-const filterProvinsi = document.getElementById('filterProvinsi');
-const filterUnit = document.getElementById('filterUnit');
-const toast = document.getElementById('toast');
-const summaryCardsContainer = document.getElementById('summaryCardsContainer');
-const totalBiayaEl = document.getElementById('totalBiaya');
-const totalEntriesEl = document.getElementById('totalEntries');
-
-// Detail Modal Elements
-const detailModal = document.getElementById('detailModal');
-const detailItemsList = document.getElementById('detailItemsList');
-const detailKabupaten = document.getElementById('detailKabupaten');
-const detailProvinsi = document.getElementById('detailProvinsi');
-const detailTotalBiaya = document.getElementById('detailTotalBiaya');
-
-// Charts
-let unitChart = null;
-let kabupatenChart = null;
-
-// Map
-let map = null;
-let markersLayer = null;
-
-// Coordinate mapping (using existing coordinates, logic to add fallback)
-const koordinatKabupaten = {
-    // Aceh
-    "Kab. Pidie": [5.3175, 95.9533], "Pidie": [5.3175, 95.9533],
-    "Kab. Pidie Jaya": [5.1493, 96.1819], "Pidie Jaya": [5.1493, 96.1819],
-    "Kab. Bireun": [5.0378, 96.7009], "Bireun": [5.0378, 96.7009], "Bireuen": [5.0378, 96.7009], "Kab. Bireuen": [5.0378, 96.7009],
-    "Kab. Aceh Utara": [5.1833, 97.1333], "Aceh Utara": [5.1833, 97.1333],
-    "Kab. Aceh Timur": [4.5833, 97.9167], "Aceh Timur": [4.5833, 97.9167],
-    "Kab. Aceh Tamiang": [4.2528, 97.9783], "Aceh Tamiang": [4.2528, 97.9783],
-    "Kab. Aceh Tengah": [4.6197, 96.8517], "Aceh Tengah": [4.6197, 96.8517],
-    "Kab. Aceh Selatan": [3.2000, 97.3833], "Aceh Selatan": [3.2000, 97.3833],
-    "Kab. Nagan Raya": [4.1500, 96.5667], "Nagan Raya": [4.1500, 96.5667],
-    "Kab. Aceh Barat": [4.4500, 96.1667], "Aceh Barat": [4.4500, 96.1667],
-    "Kab. Bener Meriah": [4.7000, 96.9000], "Bener Meriah": [4.7000, 96.9000],
-    "Kab. Gayo Luwes": [4.0833, 97.3500], "Gayo Luwes": [4.0833, 97.3500],
-    "Kab. Aceh Tenggara": [3.3667, 97.7000], "Aceh Tenggara": [3.3667, 97.7000],
-    "Kab. Aceh Singkil": [2.3667, 97.8000], "Aceh Singkil": [2.3667, 97.8000],
-    "Kota Lhoukseumawe": [5.1817, 97.1508], "Kota Lhokseumawe": [5.1817, 97.1508],
-    "Kota Langsa": [4.4683, 97.9683],
-    "Aceh Besar": [5.3667, 95.4500],
-    
-    // Sumatera Utara
-    "Kab. Langkat": [3.7600, 98.2900], "Langkat": [3.7600, 98.2900],
-    "Kab. Deli Serdang": [3.4194, 98.6767], "Deli Serdang": [3.4194, 98.6767],
-    "Kab. Tapanuli Tengah": [1.8333, 98.6667], "Tapanuli Tengah": [1.8333, 98.6667],
-    "Kab. Tapanuli Selatan": [1.5333, 99.2667], "Tapanuli Selatan": [1.5333, 99.2667],
-    "Kab. Tapanuli Utara": [2.0500, 99.0333], "Tapanuli Utara": [2.0500, 99.0333],
-    "Kota Sibolga": [1.7417, 98.7806],
-    "Kota Padang Sidempuan": [1.3833, 99.2667], "Kota Padangsidimpuan": [1.3833, 99.2667],
-    "Kota Medan": [3.5952, 98.6722],
-    "Kab. Asahan": [2.8667, 99.6500], "Asahan": [2.8667, 99.6500],
-    "Kab. Batubara": [3.1500, 99.5833], "Batubara": [3.1500, 99.5833],
-    "Kab. Humbang Hasundutan": [2.2500, 98.5667], "Humbang Hasundutan": [2.2500, 98.5667],
-    "Sibolga Selatan": [1.7200, 98.7900],
-    "Sibolga Utara": [1.7700, 98.7700],
-    
-    // Sumatera Barat
-    "Kab. Pasaman": [0.0833, 99.9833], "Pasaman": [0.0833, 99.9833],
-    "Kab. Solok": [-0.8000, 100.6500], "Solok": [-0.8000, 100.6500],
-    "Kab. Pesisir Selatan": [-1.5833, 100.5333], "Pesisir Selatan": [-1.5833, 100.5333], "Peisir Selatan": [-1.5833, 100.5333],
-    "Kab. Lima Puluh Kota": [-0.1000, 100.6333], "Lima Puluh Kota": [-0.1000, 100.6333],
-    "Kab. Agam": [-0.2000, 100.3333], "Agam": [-0.2000, 100.3333],
-    "Kab. Padang Pariaman": [-0.5667, 100.1500], "Padang Pariaman": [-0.5667, 100.1500],
-    "Kab. Tanah Datar": [-0.4667, 100.6167], "Tanah Datar": [-0.4667, 100.6167],
-    "Kota Pariaman": [-0.6278, 100.1181],
-    "Kota Solok": [-0.7917, 100.6500],
-    "Kota Padang": [-0.9492, 100.3543],
-    "Kab. Kep. Mentawai": [-1.4167, 99.0833], "Kep. Mentawai": [-1.4167, 99.0833],
-    "Pasaman Barat": [0.1333, 99.7833],
-    "Pesisir Barat": [-1.5833, 100.5333] // Assuming typo for Pesisir Selatan
+    }).format(number);
 };
 
-// Search coordinates function
-function getCoordinates(name) {
-    if (koordinatKabupaten[name]) return koordinatKabupaten[name];
-    
-    // Try to fuzzy match keys
-    const keys = Object.keys(koordinatKabupaten);
-    const normalizedName = name.toLowerCase().replace('kab.', '').replace('kota', '').trim();
-    
-    for (const key of keys) {
-        if (key.toLowerCase().includes(normalizedName)) {
-            return koordinatKabupaten[key];
+document.addEventListener('DOMContentLoaded', () => {
+    initMap();
+    initFilters();
+    initDashboard();
+
+    document.getElementById('tahunFilter').addEventListener('change', applyFilters);
+    document.getElementById('provinsiFilter').addEventListener('change', applyFilters);
+    document.getElementById('kabupatenFilter').addEventListener('change', applyFilters);
+    document.getElementById('sektorFilter').addEventListener('change', applyFilters);
+});
+
+function initMap() {
+    map = L.map('map').setView([1.5, 98.5], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+}
+
+function initFilters() {
+    const kabs = new Set();
+    const sektors = new Set();
+
+    comprehensiveData.forEach(item => {
+        if (item.lokasi.kabupaten && item.lokasi.kabupaten !== "-") {
+            kabs.add(item.lokasi.kabupaten);
         }
-    }
-    
-    // Fallback based on Province if possible (not implemented here for simplicity)
-    return null; 
-}
+        if (item.sektor && item.sektor !== "-") {
+            sektors.add(item.sektor);
+        }
+    });
 
-// ===== Toast Notifications =====
-function showToast(message, type = 'success') {
-    const icons = { success: '✅', error: '❌', warning: '⚠️' };
-    toast.querySelector('.toast-icon').textContent = icons[type];
-    toast.querySelector('.toast-message').textContent = message;
-    toast.className = `toast ${type} show`;
-    setTimeout(() => toast.classList.remove('show'), 3000);
-}
-
-// ===== Filter Listeners =====
-filterProvinsi.addEventListener('change', (e) => {
-    currentProvinsiFilter = e.target.value;
-    refreshAll();
-});
-
-filterUnit.addEventListener('change', (e) => {
-    currentUnitFilter = e.target.value;
-    refreshAll();
-});
-
-const filterKategori = document.getElementById('filterKategori');
-filterKategori.addEventListener('change', (e) => {
-    currentKategoriFilter = e.target.value;
-    refreshAll();
-});
-
-function populateFilters() {
-    const data = getData();
-    const provinsiSet = new Set(data.map(item => item.provinsi).filter(p => p));
-    const provinsiList = Array.from(provinsiSet).sort();
-    
-    filterProvinsi.innerHTML = '<option value="">Semua Provinsi</option>';
-    provinsiList.forEach(prov => {
+    const kabFilter = document.getElementById('kabupatenFilter');
+    Array.from(kabs).sort().forEach(kab => {
         const option = document.createElement('option');
-        option.value = prov;
-        option.textContent = prov;
-        filterProvinsi.appendChild(option);
+        option.value = kab;
+        option.textContent = kab;
+        kabFilter.appendChild(option);
+    });
+
+    const sektorFilter = document.getElementById('sektorFilter');
+    Array.from(sektors).sort().forEach(sek => {
+        const option = document.createElement('option');
+        option.value = sek;
+        option.textContent = sek;
+        sektorFilter.appendChild(option);
     });
 }
 
-// ===== Render Functions =====
-function renderTable() {
-    const data = getFilteredData();
-    const searchVal = document.getElementById('searchInput').value.toLowerCase();
-    
-    const filteredData = data.filter(item => 
-        item.kabupaten.toLowerCase().includes(searchVal) ||
-        item.provinsi.toLowerCase().includes(searchVal)
-    );
+function initDashboard() {
+    applyFilters();
+}
 
-    if (filteredData.length === 0) {
-        tableBody.innerHTML = '';
-        emptyState.style.display = 'flex';
-        document.querySelector('table').style.display = 'none';
-        return;
+function getBudgetByYear(item, selectedYear) {
+    if (selectedYear === 'Semua') {
+        return item.totalAnggaran || 0;
     }
-    
-    emptyState.style.display = 'none';
-    document.querySelector('table').style.display = 'table';
-    
-    tableBody.innerHTML = filteredData.map((item, index) => {
-        // Collect unique units
-        const units = [...new Set(item.items.map(i => i.unit))];
-        const unitBadges = units.map(u => 
-            `<span class="badge-unit badge-${u.toLowerCase()}">${u}</span>`
-        ).join(' ');
-        
-        return `
-        <tr data-id="${item.id}">
-            <td>${index + 1}</td>
-            <td>${item.provinsi || '-'}</td>
-            <td>${item.kabupaten}</td>
-            <td>${item.items.length} Kegiatan</td>
-            <td>${unitBadges}</td>
-            <td class="currency-cell" style="font-weight: bold; color: #0284c7;">${formatCurrency(item.totalBiaya)}</td>
-            <td>
-                <div class="action-btns">
-                    <button class="action-btn view" onclick="openDetailModal('${item.id}')" title="Lihat Detail Bantuan">📋</button>
-                    <!-- Edit/Delete disabled for now as data comes from Excel -->
-                </div>
-            </td>
-        </tr>
-    `}).join('');
+    const yearData = item[`tahun${selectedYear}`];
+    return yearData ? (yearData.anggaran || 0) : 0;
 }
 
-function updateSummary() {
-    const data = getFilteredData();
-    
-    let stats = {
-        totalBiaya: 0,
-        regularBiaya: 0,
-        tambahanBiaya: 0,
-        units: {
-            'DJPB': { regular: 0, tambahan: 0 },
-            'DJPT': { regular: 0, tambahan: 0 },
-            'PDSPKP': { regular: 0, tambahan: 0 },
-            'BPPSDM': { regular: 0, tambahan: 0 }
-        },
-        kabupatenCount: data.length
-    };
-    
-    data.forEach(item => {
-        stats.totalBiaya += item.totalBiaya;
-        item.items.forEach(subItem => {
-            const isReguler = subItem.kategori === 'Reguler';
-            const isTambahan = subItem.kategori === 'Tambahan (On Top)';
-            
-            if (isReguler) {
-                stats.regularBiaya += subItem.biaya;
-            } else if (isTambahan) {
-                stats.tambahanBiaya += subItem.biaya;
+function applyFilters() {
+    const tahun = document.getElementById('tahunFilter').value;
+    const provinsi = document.getElementById('provinsiFilter').value;
+    const kabupaten = document.getElementById('kabupatenFilter').value;
+    const sektor = document.getElementById('sektorFilter').value;
+
+    const filteredData = comprehensiveData.filter(item => {
+        let match = true;
+        if (provinsi !== 'Semua' && item.lokasi.provinsi !== provinsi) match = false;
+        if (kabupaten !== 'Semua' && item.lokasi.kabupaten !== kabupaten) match = false;
+        if (sektor !== 'Semua' && item.sektor !== sektor) match = false;
+        
+        // If specific year is selected, ensure it has budget > 0 for that year, or at least exists
+        if (tahun !== 'Semua') {
+            const b = getBudgetByYear(item, tahun);
+            if (b === 0 && (!item[`tahun${tahun}`] || !item[`tahun${tahun}`].output)) {
+                match = false; // no action planned for this year
             }
-            
-            if (stats.units[subItem.unit] !== undefined) {
-                if (isReguler) {
-                    stats.units[subItem.unit].regular += subItem.biaya;
-                } else {
-                    stats.units[subItem.unit].tambahan += subItem.biaya;
-                }
-            }
-        });
+        }
+        return match;
     });
-    
-    totalEntriesEl.textContent = formatNumber(stats.kabupatenCount);
-    
-    // Build KPI cards with detailed breakdown
-    // Regular Card
-    const regularCard = `
-        <div class="summary-card card-gradient-2">
-            <div class="card-icon">📋</div>
-            <div class="card-content">
-                <span class="card-value" style="font-size: 1.1rem;">${formatCurrency(stats.regularBiaya)}</span>
-                <span class="card-label">A. Reguler (RKA KL 2026)</span>
-                <span class="card-sublabel" style="font-size: 0.7rem; color: rgba(255,255,255,0.8);">Rp ${formatNumber(stats.regularBiaya / 1000)} ribu</span>
-            </div>
-        </div>
-    `;
-    
-    // Tambahan Card
-    const tambahanCard = `
-        <div class="summary-card card-gradient-3">
-            <div class="card-icon">📈</div>
-            <div class="card-content">
-                <span class="card-value" style="font-size: 1.1rem;">${formatCurrency(stats.tambahanBiaya)}</span>
-                <span class="card-label">B. Usulan Tambahan</span>
-                <span class="card-sublabel" style="font-size: 0.7rem; color: rgba(255,255,255,0.8);">Rp ${formatNumber(stats.tambahanBiaya / 1000)} ribu</span>
-            </div>
-        </div>
-    `;
-    
-    // Unit Cards with detailed amounts
-    const unitCards = Object.entries(stats.units).map(([unit, costs], index) => {
-        const totalCost = costs.regular + costs.tambahan;
-        if (totalCost === 0) return '';
-        
-        const cardClass = `card-gradient-${(index % 6) + 1}`;
-        let icon = '🏢';
-        let label = unit;
-        
-        if (unit === 'DJPB') { icon = '🐟'; label = 'DJPB (Budidaya)'; }
-        if (unit === 'DJPT') { icon = '⚓'; label = 'DJPT (Tangkap)'; }
-        if (unit === 'PDSPKP') { icon = '🏭'; label = 'PDSPKP (Pengolahan)'; }
-        if (unit === 'BPPSDM') { icon = '🎓'; label = 'BPPSDM (SDM)'; }
-        
-        return `
-        <div class="summary-card ${cardClass}">
-            <div class="card-icon">${icon}</div>
-            <div class="card-content">
-                <span class="card-value" style="font-size: 1rem;">${formatCurrency(totalCost)}</span>
-                <span class="card-label">${label}</span>
-                <div class="card-breakdown" style="font-size: 0.65rem; color: rgba(255,255,255,0.85); margin-top: 4px;">
-                    ${costs.regular > 0 ? `<div>Reguler: ${formatCurrency(costs.regular)}</div>` : ''}
-                    ${costs.tambahan > 0 ? `<div>Tambahan: ${formatCurrency(costs.tambahan)}</div>` : ''}
-                </div>
-            </div>
-        </div>
-        `;
-    }).join('');
-    
-    // Total Card with full detail
-    const totalCard = `
-         <div class="summary-card card-gradient-8">
-            <div class="card-icon">💰</div>
-            <div class="card-content">
-                <span class="card-value" id="totalBiaya" style="font-size: 1.2rem;">${formatCurrency(stats.totalBiaya)}</span>
-                <span class="card-label">Total Estimasi Biaya</span>
-                <span class="card-sublabel" style="font-size: 0.7rem; color: rgba(255,255,255,0.8);">Rp ${formatNumber(stats.totalBiaya / 1000)} ribu</span>
-            </div>
-        </div>
-    `;
-    
-    summaryCardsContainer.innerHTML = regularCard + tambahanCard + unitCards + totalCard;
+
+    updateSummary(filteredData, tahun);
+    updateCharts(filteredData, tahun);
+    renderTable(filteredData, tahun);
+    updateMap(filteredData, tahun);
 }
 
-function updateCharts() {
-    const data = getFilteredData();
-    
-    // 1. Cost per Unit Chart (Pie)
-    let unitCosts = {};
+function updateSummary(data, tahun) {
+    let totalBiaya = 0;
     data.forEach(item => {
-        item.items.forEach(subItem => {
-            const u = subItem.unit || 'Lainnya';
-            unitCosts[u] = (unitCosts[u] || 0) + subItem.biaya;
-        });
+        totalBiaya += getBudgetByYear(item, tahun);
     });
-    
-    const unitLabels = Object.keys(unitCosts);
-    const unitValues = Object.values(unitCosts).map(v => v / 1000000000); // In Billions
-    const unitColors = ['#0ea5e9', '#0369a1', '#0d9488', '#7c3aed', '#64748b'];
-    
-    if (unitChart) unitChart.destroy();
-    const ctx1 = document.getElementById('unitChart').getContext('2d');
-    unitChart = new Chart(ctx1, {
+
+    document.getElementById('totalBiaya').textContent = formatRupiah(totalBiaya);
+    document.getElementById('totalVolume').textContent = data.length + " Aksi"; // Representing number of actions since volume units differ
+}
+
+function updateCharts(data, tahun) {
+    const sektorData = {};
+    const provinsiData = {};
+
+    data.forEach(item => {
+        const budget = getBudgetByYear(item, tahun);
+        if (budget > 0) {
+            // Sektor
+            sektorData[item.sektor] = (sektorData[item.sektor] || 0) + budget;
+            // Provinsi
+            provinsiData[item.lokasi.provinsi] = (provinsiData[item.lokasi.provinsi] || 0) + budget;
+        }
+    });
+
+    // Sektor Chart
+    const ctxProg = document.getElementById('programChart').getContext('2d');
+    if (programChart) programChart.destroy();
+    programChart = new Chart(ctxProg, {
         type: 'doughnut',
         data: {
-            labels: unitLabels,
+            labels: Object.keys(sektorData),
             datasets: [{
-                data: unitValues,
-                backgroundColor: unitColors,
-                borderWidth: 0,
-                hoverOffset: 10
+                data: Object.values(sektorData),
+                backgroundColor: ['#0284c7', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'],
+                borderWidth: 0
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            cutout: '60%',
             plugins: {
-                legend: { position: 'bottom' },
-                tooltip: { 
-                    callbacks: { 
-                        label: (ctx) => `${ctx.label}: ${formatNumber(ctx.raw.toFixed(2))} M`
-                    } 
-                }
+                legend: { position: 'right', labels: { boxWidth: 12 } },
+                tooltip: { callbacks: { label: (ctx) => ' ' + formatRupiah(ctx.raw) } }
             }
         }
     });
-    
-    // 2. Top 10 Kabupaten by Cost
-    const sortedKab = [...data].sort((a, b) => b.totalBiaya - a.totalBiaya).slice(0, 10);
-    const kabLabels = sortedKab.map(d => d.kabupaten);
-    const kabValues = sortedKab.map(d => d.totalBiaya / 1000000000);
-    
-    if (kabupatenChart) kabupatenChart.destroy();
-    const ctx2 = document.getElementById('kabupatenChart').getContext('2d');
-    kabupatenChart = new Chart(ctx2, {
+
+    // Provinsi Chart
+    const ctxProv = document.getElementById('provinsiChart').getContext('2d');
+    if (provinsiChart) provinsiChart.destroy();
+    provinsiChart = new Chart(ctxProv, {
         type: 'bar',
         data: {
-            labels: kabLabels,
+            labels: Object.keys(provinsiData),
             datasets: [{
-                label: 'Biaya (Miliar Rp)',
-                data: kabValues,
-                backgroundColor: 'rgba(14, 165, 233, 0.8)',
+                label: 'Total Anggaran',
+                data: Object.values(provinsiData),
+                backgroundColor: '#0ea5e9',
                 borderRadius: 4
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            indexAxis: 'y',
             plugins: {
                 legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                         label: (ctx) => `${formatCurrency(ctx.raw * 1000000000)}`
-                    }
-                }
+                tooltip: { callbacks: { label: (ctx) => ' ' + formatRupiah(ctx.raw) } }
             },
             scales: {
-                x: { ticks: { callback: (val) => val + ' M' } }
+                y: { beginAtZero: true, ticks: { callback: (value) => 'Rp ' + (value / 1e9).toFixed(0) + ' M' } }
             }
         }
     });
 }
 
-// ===== Map Functions =====
-function initMap() {
-    // Initialize map centered on Sumatera
-    map = L.map('map').setView([2.5, 98.5], 6);
+function renderTable(data, tahun) {
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
     
-    // Esri World Imagery (Satellite View)
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-    }).addTo(map);
-    markersLayer = L.layerGroup().addTo(map);
-    updateMap();
-}
+    document.getElementById('emptyState').style.display = data.length === 0 ? 'block' : 'none';
 
-function updateMap() {
-    if (!map || !markersLayer) return;
-    markersLayer.clearLayers();
-    const data = getFilteredData();
-    
-    // Province colors
-    const provinceColors = {
-        'Aceh': '#0369a1',
-        'Sumatera Utara': '#0891b2',
-        'Sumatera Barat': '#0e7490'
-    };
-    
-    const bounds = [];
-    
-    data.forEach(item => {
-        const coords = getCoordinates(item.kabupaten);
-        if (!coords) return;
-        
-        bounds.push(coords);
-        
-        const color = provinceColors[item.provinsi] || '#0369a1';
-        
-        // Summary of items for popup
-        const itemCount = item.items.length;
-        const topItem = item.items[0] ? item.items[0].kegiatan : '';
-        const moreCount = itemCount > 1 ? `dan ${itemCount - 1} kegiatan lainnya` : '';
-        
-        const markerIcon = L.divIcon({
-            className: 'custom-marker',
-            html: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 24 30" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));">
-                <path fill="#dc2626" stroke="#fff" stroke-width="1.5" d="M12 0C5.4 0 0 5.4 0 12c0 7.5 12 18 12 18s12-10.5 12-18c0-6.6-5.4-12-12-12z"/>
-                <circle fill="#fff" cx="12" cy="11" r="4"/>
-            </svg>`,
-            iconSize: [28, 36],
-            iconAnchor: [14, 36]
-        });
-        
-        const popupContent = `
-            <div class="popup-title">${item.kabupaten}</div>
-            <div class="popup-content">
-                <strong>Provinsi:</strong> ${item.provinsi}<br>
-                <strong>Total Biaya:</strong> ${formatCurrency(item.totalBiaya)}<br>
-                <hr style="margin: 5px 0; border: 0; border-top: 1px solid #eee;">
-                <div style="font-size: 0.75rem; color: #555;">
-                   ${topItem}<br>
-                   ${moreCount}
-                </div>
-            </div>
+    data.forEach((item, index) => {
+        const budget = getBudgetByYear(item, tahun);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${index + 1}</td>
+            <td>
+                <strong>${item.lokasi.provinsi}</strong><br>
+                <span style="font-size: 0.85rem; color: #64748b;">${item.lokasi.kabupaten}</span>
+            </td>
+            <td>
+                <div style="font-weight: 600; color: #0f172a; margin-bottom: 4px;">${item.program}</div>
+                <div style="font-size: 0.85rem; color: #64748b;">${item.rencanaAksi}</div>
+            </td>
+            <td><span class="badge" style="background: rgba(14, 165, 233, 0.1); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.2);">${item.sasaran || '-'}</span></td>
+            <td style="font-weight: 700; color: #059669;">${formatRupiah(budget)}</td>
+            <td style="text-align: center;">
+                <button class="btn btn-sm btn-primary" onclick="showDetail('${item.id}')">
+                    <i class="fas fa-list"></i> Rincian
+                </button>
+            </td>
         `;
-        
-        L.marker(coords, { icon: markerIcon }).bindPopup(popupContent).addTo(markersLayer);
+        tbody.appendChild(tr);
     });
-    
-    if (bounds.length > 0) map.fitBounds(bounds, { padding: [50, 50] });
 }
 
-// ===== Detail Modal =====
-function openDetailModal(id) {
-    const data = getData();
-    const item = data.find(i => i.id === id);
+window.showDetail = function(id) {
+    const item = comprehensiveData.find(i => i.id === id);
     if (!item) return;
-    
-    detailKabupaten.textContent = item.kabupaten;
-    detailProvinsi.textContent = item.provinsi;
-    detailTotalBiaya.textContent = formatCurrency(item.totalBiaya);
-    
-    // Sort items by cost descending
-    const sortedItems = [...item.items].sort((a, b) => b.biaya - a.biaya);
-    
-    detailItemsList.innerHTML = sortedItems.map(subItem => `
-        <div class="item-row">
-            <div class="item-details">
-                <div class="item-title">
-                    <span class="badge-unit badge-${subItem.unit.toLowerCase()}">${subItem.unit}</span>
-                    ${subItem.kegiatan}
+
+    const modalBody = document.getElementById('detailModalBody');
+    modalBody.innerHTML = `
+        <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
+            <div class="glass-card" style="padding: 1.5rem; border: 1px solid var(--glass-border);">
+                <h4 style="color: var(--primary-gradient); margin-bottom: 1rem;"><i class="fas fa-bullseye"></i> Konteks & Sasaran</h4>
+                <div style="display: grid; grid-template-columns: 150px 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <strong style="color: var(--text-muted);">Isu / Dampak</strong>
+                    <span>${item.isu}</span>
                 </div>
-                <div class="item-meta">
-                     Kategori: ${subItem.kategori} | Vol: ${formatNumber(subItem.volume)} ${subItem.satuan}
+                <div style="display: grid; grid-template-columns: 150px 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <strong style="color: var(--text-muted);">Rincian Output</strong>
+                    <span>${item.ro}</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 150px 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <strong style="color: var(--text-muted);">Sasaran</strong>
+                    <span style="color: var(--success); font-weight: bold;">${item.sasaran}</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 150px 1fr; gap: 0.5rem;">
+                    <strong style="color: var(--text-muted);">Sektor</strong>
+                    <span>${item.sektor}</span>
                 </div>
             </div>
-            <div class="item-cost">${formatCurrency(subItem.biaya)}</div>
+
+            <div class="glass-card" style="padding: 1.5rem; border: 1px solid var(--glass-border);">
+                <h4 style="color: var(--info); margin-bottom: 1rem;"><i class="fas fa-calendar-alt"></i> Timeline & Anggaran Pelaksanaan</h4>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 1rem;">
+                    <thead>
+                        <tr style="background: rgba(0,0,0,0.05);">
+                            <th style="padding: 0.75rem; text-align: left; border: 1px solid #e2e8f0;">Tahun</th>
+                            <th style="padding: 0.75rem; text-align: left; border: 1px solid #e2e8f0;">Target Output</th>
+                            <th style="padding: 0.75rem; text-align: right; border: 1px solid #e2e8f0;">Anggaran</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 0.75rem; border: 1px solid #e2e8f0;">2026</td>
+                            <td style="padding: 0.75rem; border: 1px solid #e2e8f0;">${item.tahun2026.output || '-'}</td>
+                            <td style="padding: 0.75rem; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${formatRupiah(item.tahun2026.anggaran)}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.75rem; border: 1px solid #e2e8f0;">2027</td>
+                            <td style="padding: 0.75rem; border: 1px solid #e2e8f0;">${item.tahun2027.output || '-'}</td>
+                            <td style="padding: 0.75rem; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${formatRupiah(item.tahun2027.anggaran)}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.75rem; border: 1px solid #e2e8f0;">2028</td>
+                            <td style="padding: 0.75rem; border: 1px solid #e2e8f0;">${item.tahun2028.output || '-'}</td>
+                            <td style="padding: 0.75rem; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${formatRupiah(item.tahun2028.anggaran)}</td>
+                        </tr>
+                        <tr style="background: rgba(16, 185, 129, 0.1);">
+                            <td colspan="2" style="padding: 0.75rem; border: 1px solid #e2e8f0; font-weight: bold;">Total Anggaran</td>
+                            <td style="padding: 0.75rem; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: var(--success);">${formatRupiah(item.totalAnggaran)}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <span class="badge" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--glass-border);"><i class="fas fa-money-bill"></i> Sumber: ${item.sumberDana || '-'}</span>
+                    <span class="badge" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--glass-border);"><i class="fas fa-cogs"></i> Skema: ${item.skemaPelaksanaan || '-'}</span>
+                    <span class="badge" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--glass-border);"><i class="fas fa-handshake"></i> Mitra: ${item.mitra || '-'}</span>
+                </div>
+            </div>
         </div>
-    `).join('');
-    
-    detailModal.classList.add('show');
+    `;
+
+    document.getElementById('detailModal').classList.add('show');
 }
 
-function closeDetailModal() {
-    detailModal.classList.remove('show');
+window.closeDetailModal = function() {
+    document.getElementById('detailModal').classList.remove('show');
 }
 
-function refreshAll() {
-    renderTable();
-    updateSummary();
-    updateCharts();
-    updateMap();
-}
+function updateMap(data, tahun) {
+    markers.forEach(m => map.removeLayer(m));
+    markers = [];
 
-function init() {
-    initializeData(); // Load seedData into localStorage
-    document.getElementById('searchInput').addEventListener('input', renderTable);
-    populateFilters();
-    refreshAll();
-    initMap();
-}
+    const provCoords = {
+        'Aceh': [4.6951, 96.7494],
+        'Sumatera Utara': [2.1154, 99.5451],
+        'Sumatera Barat': [-0.7399, 100.8000]
+    };
 
-// Initialize on load
-document.addEventListener('DOMContentLoaded', init);
+    const provAgg = {};
+    data.forEach(item => {
+        const budget = getBudgetByYear(item, tahun);
+        const prov = item.lokasi.provinsi;
+        if (prov && budget > 0) {
+            if (!provAgg[prov]) provAgg[prov] = { budget: 0, aksi: 0 };
+            provAgg[prov].budget += budget;
+            provAgg[prov].aksi += 1;
+        }
+    });
+
+    for (const [prov, stats] of Object.entries(provAgg)) {
+        if (provCoords[prov]) {
+            const marker = L.marker(provCoords[prov]).addTo(map);
+            marker.bindPopup(`
+                <div class="p-2">
+                    <h6 class="fw-bold mb-2">${prov}</h6>
+                    <div class="small mb-1"><strong>Total Aksi:</strong> ${stats.aksi} kegiatan</div>
+                    <div class="small text-success fw-bold"><strong>Anggaran:</strong> ${formatRupiah(stats.budget)}</div>
+                </div>
+            `);
+            markers.push(marker);
+        }
+    }
+}

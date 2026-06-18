@@ -2,12 +2,16 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dampak Bencana Sumatera | Kementerian Kelautan dan Perikanan</title>
     <meta name="description" content="Sistem Monitoring Program Monitoring Dampak Bencana Sumatera">
     <link rel="stylesheet" href="style.css">
     <link rel="icon" type="image/png" href="assets/logo-kkp.png">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Leaflet CSS -->
@@ -110,40 +114,51 @@
         <section class="filter-section glass-card">
             <div class="filter-content">
                 <div class="filter-item">
-                    <label for="filterProvinsi">🗺️ Filter Provinsi:</label>
-                    <select id="filterProvinsi">
-                        <option value="">Semua Provinsi</option>
+                    <label for="tahunFilter"><i class="fas fa-calendar-alt"></i> Tahun</label>
+                    <select id="tahunFilter">
+                        <option value="Semua">Semua Tahun (2026-2028)</option>
+                        <option value="2026">2026</option>
+                        <option value="2027">2027</option>
+                        <option value="2028">2028</option>
                     </select>
                 </div>
                 <div class="filter-item">
-                    <label for="filterUnit">🏢 Filter Unit:</label>
-                    <select id="filterUnit">
-                        <option value="">Semua Unit</option>
-                        <option value="DJPB">DJPB (Budidaya)</option>
-                        <option value="DJPT">DJPT (Tangkap)</option>
-                        <option value="PDSPKP">PDSPKP (Penguatan Daya Saing)</option>
-                         <option value="BPPSDM">BPPSDM (SDM)</option>
+                    <label for="provinsiFilter"><i class="fas fa-map-marker-alt"></i> Provinsi</label>
+                    <select id="provinsiFilter">
+                        <option value="Semua">Semua Provinsi</option>
+                        <option value="Aceh">Aceh</option>
+                        <option value="Sumatera Utara">Sumatera Utara</option>
+                        <option value="Sumatera Barat">Sumatera Barat</option>
                     </select>
                 </div>
                 <div class="filter-item">
-                    <label for="filterKategori">📊 Kategori Anggaran:</label>
-                    <select id="filterKategori">
-                        <option value="">Semua Kategori</option>
-                        <option value="Reguler">A. Reguler (RKA KL 2026)</option>
-                        <option value="Tambahan (On Top)">B. Usulan Tambahan</option>
+                    <label for="kabupatenFilter"><i class="fas fa-city"></i> Kabupaten/Kota</label>
+                    <select id="kabupatenFilter">
+                        <option value="Semua">Semua Kabupaten/Kota</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label for="sektorFilter"><i class="fas fa-layer-group"></i> Sektor</label>
+                    <select id="sektorFilter">
+                        <option value="Semua">Semua Sektor</option>
                     </select>
                 </div>
             </div>
         </section>
 
-        <!-- Summary Cards Section - Dynamic Content -->
         <section class="summary-section" id="summaryCardsContainer">
-            <!-- Will be populated by JS -->
              <div class="summary-card card-gradient-8">
                 <div class="card-icon">💰</div>
                 <div class="card-content">
                     <span class="card-value" id="totalBiaya">Rp 0</span>
                     <span class="card-label">Total Estimasi Biaya</span>
+                </div>
+            </div>
+            <div class="summary-card card-gradient-7">
+                <div class="card-icon">📦</div>
+                <div class="card-content">
+                    <span class="card-value" id="totalVolume">0</span>
+                    <span class="card-label">Total Volume (Unit/Paket/Ha)</span>
                 </div>
             </div>
         </section>
@@ -154,54 +169,44 @@
             <div id="map" class="map-container"></div>
         </section>
 
-        <!-- Charts Section -->
         <div class="charts-grid">
             <section class="chart-card glass-card">
-                <h3>📊 Distribusi Biaya per Unit Kerja</h3>
+                <h3><i class="fas fa-chart-pie"></i> Anggaran per Sektor</h3>
                 <div class="chart-container">
-                    <canvas id="unitChart"></canvas>
+                    <canvas id="programChart"></canvas>
                 </div>
             </section>
+            
             <section class="chart-card glass-card">
-                <h3>📈 10 Kabupaten dengan Estimasi Biaya Tertinggi</h3>
+                <h3><i class="fas fa-chart-bar"></i> Anggaran per Provinsi</h3>
                 <div class="chart-container">
-                    <canvas id="kabupatenChart"></canvas>
+                    <canvas id="provinsiChart"></canvas>
                 </div>
             </section>
         </div>
 
-        <!-- Data Table Section -->
+        <!-- Data Table -->
         <section class="table-section glass-card">
             <div class="section-header">
-                <h2>📋 Data Rekapitulasi Bantuan</h2>
+                <h2>📋 Data Rencana Aksi</h2>
                 <div class="table-actions">
-                    <input type="text" id="searchInput" placeholder="🔍 Cari Kabupaten..." class="search-input">
-                    <div class="export-buttons">
-                        <button class="btn btn-export" id="exportPdfBtn" title="Export ke PDF" onclick="exportToPDF()">
-                            <span class="btn-icon">📄</span> PDF
-                        </button>
-                        <!-- <button class="btn btn-export" id="exportPptBtn" title="Export ke PowerPoint" onclick="exportToPPT()">
-                            <span class="btn-icon">📊</span> PPT
-                        </button> -->
-                    </div>
-                    <!-- Add Data disabled for now as it is read-only from Excel -->
+                    <input type="text" id="searchInput" placeholder="🔍 Cari..." class="search-input">
                 </div>
             </div>
             <div class="table-container">
                 <table id="dataTable">
                     <thead>
                         <tr>
-                            <th>No</th>
-                            <th>Provinsi</th>
-                            <th>Kabupaten/Kota</th>
-                            <th>Jumlah Kegiatan</th>
-                            <th>Unit Terkait</th>
-                            <th>Total Estimasi</th>
-                            <th>Aksi</th>
+                            <th width="5%">No</th>
+                            <th width="15%">Provinsi / Kab</th>
+                            <th width="30%">Program & Rencana Aksi</th>
+                            <th width="20%">Sasaran</th>
+                            <th width="15%">Anggaran</th>
+                            <th width="15%" style="text-align:center;">Aksi</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
-                        <!-- Data will be populated here -->
+                        <!-- Dynamic Rows Here -->
                     </tbody>
                 </table>
                 <div class="empty-state" id="emptyState">
@@ -214,22 +219,15 @@
 
     <!-- Detail Modal -->
     <div class="modal" id="detailModal">
-        <div class="modal-content modal-large glass-card">
-            <div class="modal-header">
-                <h3>📋 Detail Bantuan - <span id="detailKabupaten"></span></h3>
-                <button class="modal-close" onclick="closeDetailModal()">&times;</button>
+        <div class="modal-content glass-card" style="max-width: 900px; width: 90%;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem; margin-bottom: 1rem;">
+                <h3 style="margin: 0; color: var(--info);"><i class="fas fa-info-circle"></i> Detail Rencana Aksi</h3>
+                <button class="action-btn" onclick="closeDetailModal()" style="border: none; background: transparent; font-size: 1.5rem; cursor: pointer;">&times;</button>
             </div>
-            <div class="modal-body">
-                <div class="photo-info">
-                    <p><strong>Provinsi:</strong> <span id="detailProvinsi"></span></p>
-                    <p><strong>Total Biaya:</strong> <span id="detailTotalBiaya" style="color: #0284c7; font-weight: bold;"></span></p>
-                </div>
-                <div class="form-section-title">Rincian Kegiatan</div>
-                <div class="item-list-container" id="detailItemsList">
-                    <!-- Items will be populated here -->
-                </div>
+            <div class="modal-body" id="detailModalBody" style="max-height: 70vh; overflow-y: auto; padding-right: 10px;">
+                <!-- Dynamic modal content here -->
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" style="margin-top: 1.5rem; text-align: right; border-top: 1px solid var(--glass-border); padding-top: 1rem;">
                 <button type="button" class="btn btn-secondary" onclick="closeDetailModal()">Tutup</button>
             </div>
         </div>
@@ -244,8 +242,8 @@
     <footer class="footer">
         <p>© 2026 Dashboard Monitoring Dampak Bencana Sumatera | Kementerian Kelautan dan Perikanan RI</p>
     </footer>
-
-    <script src="seed-data.js"></script>
+    <!-- Script dependencies -->
+    <script src="comprehensive-data.js"></script>
     <script src="script.js"></script>
     <script src="export-functions.js"></script>
 </body>

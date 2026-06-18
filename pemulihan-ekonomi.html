@@ -116,12 +116,11 @@
                 <table id="dataTable">
                     <thead>
                         <tr>
-                            <th>No</th>
+                            <th style="width: 40px;">No</th>
                             <th>Program Bantuan</th>
-                            <th>Jenis Bantuan</th>
                             <th>Provinsi</th>
-                            <th>Sasaran</th>
                             <th>Total Anggaran</th>
+                            <th style="width: 60px; text-align: center;">Detail</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
@@ -185,16 +184,98 @@
             });
 
             const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = filtered.map((item, i) => `
-                <tr>
+            tbody.innerHTML = filtered.map((item, i) => {
+                const trId = `eko-row-${i}`;
+                const detailId = `eko-detail-${i}`;
+                return `
+                <tr class="expandable-row" onclick="toggleDetail('${detailId}', '${trId}')" id="${trId}">
                     <td>${i + 1}</td>
                     <td><strong>${item.program}</strong></td>
-                    <td>${item.rencanaAksi}</td>
                     <td>${item.provinsi}</td>
-                    <td>${item.sasaran}</td>
                     <td class="budget-total">${formatCurrencyCompact(item.totalAnggaran)}</td>
+                    <td style="text-align: center;">
+                        <button class="expand-btn" aria-label="Toggle Detail"><i class="fas fa-chevron-down"></i></button>
+                    </td>
                 </tr>
-            `).join('');
+                <tr class="detail-row" id="${detailId}">
+                    <td colspan="5" style="padding: 0;">
+                        <div class="detail-container">
+                            <div class="detail-grid">
+                                <div class="detail-card">
+                                    <h4><i class="fas fa-bullseye"></i> Konteks & Sasaran</h4>
+                                    <div class="detail-field">
+                                        <span class="detail-label">Isu</span>
+                                        <span class="detail-value">${item.isu}</span>
+                                    </div>
+                                    <div class="detail-field">
+                                        <span class="detail-label">Rincian Output (RO)</span>
+                                        <span class="detail-value">${item.ro}</span>
+                                    </div>
+                                    <div class="detail-field">
+                                        <span class="detail-label">Rencana Aksi</span>
+                                        <span class="detail-value">${item.rencanaAksi}</span>
+                                    </div>
+                                    <div class="detail-field">
+                                        <span class="detail-label">Sasaran</span>
+                                        <span class="detail-value">${item.sasaran}</span>
+                                    </div>
+                                </div>
+                                <div class="detail-card">
+                                    <h4><i class="fas fa-map-marker-alt"></i> Lokasi & Pelaksanaan</h4>
+                                    <div class="detail-field">
+                                        <span class="detail-label">Kabupaten/Kota</span>
+                                        <span class="detail-value">${item.kabupaten}</span>
+                                    </div>
+                                    <div class="detail-field">
+                                        <span class="detail-label">Sumber Dana</span>
+                                        <span class="detail-value">${item.sumberDana}</span>
+                                    </div>
+                                    <div class="detail-field">
+                                        <span class="detail-label">Skema</span>
+                                        <span class="detail-value">${item.skema}</span>
+                                    </div>
+                                    <div class="detail-field">
+                                        <span class="detail-label">Mitra</span>
+                                        <span class="detail-value">${item.mitra}</span>
+                                    </div>
+                                </div>
+                                <div class="detail-card">
+                                    <h4><i class="fas fa-calendar-alt"></i> Timeline & Anggaran</h4>
+                                    <div class="budget-timeline">
+                                        <div class="budget-year">
+                                            <span class="budget-year-label">2026</span>
+                                            <span class="budget-year-output">${item.output2026}</span>
+                                            <span class="budget-year-amount">${formatCurrencyCompact(item.anggaran2026)}</span>
+                                        </div>
+                                        <div class="budget-year">
+                                            <span class="budget-year-label">2027</span>
+                                            <span class="budget-year-output">${item.output2027}</span>
+                                            <span class="budget-year-amount">${formatCurrencyCompact(item.anggaran2027)}</span>
+                                        </div>
+                                        <div class="budget-year">
+                                            <span class="budget-year-label">2028</span>
+                                            <span class="budget-year-output">${item.output2028}</span>
+                                            <span class="budget-year-amount">${formatCurrencyCompact(item.anggaran2028)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        function toggleDetail(detailId, rowId) {
+            const detailRow = document.getElementById(detailId);
+            const mainRow = document.getElementById(rowId);
+            if (detailRow.classList.contains('show')) {
+                detailRow.classList.remove('show');
+                mainRow.classList.remove('expanded');
+            } else {
+                detailRow.classList.add('show');
+                mainRow.classList.add('expanded');
+            }
         }
 
         function updateCharts() {
