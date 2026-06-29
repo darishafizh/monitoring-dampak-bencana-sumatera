@@ -2,249 +2,195 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dampak Bencana Sumatera | Kementerian Kelautan dan Perikanan</title>
-    <meta name="description" content="Sistem Monitoring Program Monitoring Dampak Bencana Sumatera">
-    <link rel="stylesheet" href="style.css">
-    <link rel="icon" type="image/png" href="assets/logo-kkp.png">
+    <title>KKP - Rehabilitasi Pascabencana Sumatera</title>
+    <link rel="icon" type="image/png" href="logo-kkp.png">
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <!-- jsPDF for PDF export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- PptxGenJS for PowerPoint export -->
-    <script src="https://cdn.jsdelivr.net/gh/gitbrent/PptxGenJS@3.12.0/dist/pptxgen.bundle.js"></script>
-    <style>
-        /* Custom styles for new dynamic content */
-        .badge-unit {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: white;
-        }
-        .badge-djpb { background-color: #0ea5e9; }
-        .badge-djpt { background-color: #0369a1; }
-        .badge-pdspkp { background-color: #0d9488; }
-        .badge-bppsdm { background-color: #7c3aed; }
-        .badge-other { background-color: #64748b; }
-        
-        .item-list-container {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        
-        .item-row {
-            padding: 12px;
-            border-bottom: 1px solid #f1f5f9;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .item-row:last-child {
-            border-bottom: none;
-        }
-        
-        .item-details {
-            flex: 1;
-        }
-        
-        .item-title {
-            font-weight: 600;
-            color: #0f172a;
-            margin-bottom: 4px;
-        }
-        
-        .item-meta {
-            font-size: 0.85rem;
-            color: #64748b;
-        }
-        
-        .item-cost {
-            font-weight: 700;
-            color: #0369a1;
-            font-size: 0.95rem;
-            margin-left: 16px;
-        }
-    </style>
+    
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <div class="header-content">
-            <div class="logo-section">
-                <div class="logo-icon"><img src="assets/logo-kkp.png" alt="Logo KKP"></div>
-                <div class="logo-text">
-                    <h1>Dashboard Monitoring</h1>
-                    <p>Rencana Rehabilitasi Bencana Sumatera</p>
+    <!-- Top Navigation Bar -->
+    <header class="top-navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <div class="brand-logo"><img src="logo-kkp.png" alt="Logo KKP"></div>
+                <div class="brand-title">
+                    <h1>Dashboard Analisis</h1>
+                    <p>Rencana Induk Rehabilitasi dan Rekonstruksi Pascabencana Sumatera (2026-2028)</p>
                 </div>
-            </div>
-            <div class="header-stats">
-                <div class="mini-stat">
-                    <span class="mini-stat-value" id="totalEntries">0</span>
-                    <span class="mini-stat-label">Total Lokasi</span>
-                </div>
-                <!-- Removed Total Kabupaten redundant stat -->
             </div>
         </div>
     </header>
 
-    <!-- Navigation -->
-    <nav class="main-nav">
-        <a href="index.html" class="active"><i class="fas fa-chart-pie nav-icon"></i> Dashboard</a>
-        <a href="rencana-induk.html"><i class="fas fa-clipboard-list nav-icon"></i> Rencana Induk</a>
-        <a href="rehabilitasi.html"><i class="fas fa-tools nav-icon"></i> Rehabilitasi</a>
-        <a href="pemulihan-ekonomi.html"><i class="fas fa-coins nav-icon"></i> Pemulihan Ekonomi</a>
-        <a href="laporan-harian.html"><i class="fas fa-camera nav-icon"></i> Laporan Harian</a>
-        <a href="dasar-hukum.html"><i class="fas fa-gavel nav-icon"></i> Dasar Hukum</a>
-    </nav>
-
-    <main class="main-container">
-        <!-- Filter Section -->
-        <section class="filter-section glass-card">
-            <div class="filter-content">
-                <div class="filter-item">
-                    <label for="tahunFilter"><i class="fas fa-calendar-alt"></i> Tahun</label>
-                    <select id="tahunFilter">
-                        <option value="Semua">Semua Tahun (2026-2028)</option>
-                        <option value="2026">2026</option>
-                        <option value="2027">2027</option>
-                        <option value="2028">2028</option>
-                    </select>
-                </div>
-                <div class="filter-item">
-                    <label for="provinsiFilter"><i class="fas fa-map-marker-alt"></i> Provinsi</label>
-                    <select id="provinsiFilter">
-                        <option value="Semua">Semua Provinsi</option>
-                        <option value="Aceh">Aceh</option>
-                        <option value="Sumatera Utara">Sumatera Utara</option>
-                        <option value="Sumatera Barat">Sumatera Barat</option>
-                    </select>
-                </div>
-                <div class="filter-item">
-                    <label for="kabupatenFilter"><i class="fas fa-city"></i> Kabupaten/Kota</label>
-                    <select id="kabupatenFilter">
-                        <option value="Semua">Semua Kabupaten/Kota</option>
-                    </select>
-                </div>
-                <div class="filter-item">
-                    <label for="sektorFilter"><i class="fas fa-layer-group"></i> Sektor</label>
-                    <select id="sektorFilter">
-                        <option value="Semua">Semua Sektor</option>
-                    </select>
-                </div>
-            </div>
-        </section>
-
-        <section class="summary-section" id="summaryCardsContainer">
-             <div class="summary-card card-gradient-8">
-                <div class="card-icon">💰</div>
-                <div class="card-content">
-                    <span class="card-value" id="totalBiaya">Rp 0</span>
-                    <span class="card-label">Total Estimasi Biaya</span>
-                </div>
-            </div>
-            <div class="summary-card card-gradient-7">
-                <div class="card-icon">📦</div>
-                <div class="card-content">
-                    <span class="card-value" id="totalVolume">0</span>
-                    <span class="card-label">Total Volume (Unit/Paket/Ha)</span>
-                </div>
-            </div>
-        </section>
-
-        <!-- Map Section -->
-        <section class="map-section glass-card">
-            <h3>🗺️ Peta Sebaran Lokasi Bantuan</h3>
-            <div id="map" class="map-container"></div>
-        </section>
-
-        <div class="charts-grid">
-            <section class="chart-card glass-card">
-                <h3><i class="fas fa-chart-pie"></i> Anggaran per Sektor</h3>
-                <div class="chart-container">
-                    <canvas id="programChart"></canvas>
-                </div>
-            </section>
+    <div class="dashboard-container">
+        <main class="main-content">
             
-            <section class="chart-card glass-card">
-                <h3><i class="fas fa-chart-bar"></i> Anggaran per Provinsi</h3>
-                <div class="chart-container">
-                    <canvas id="provinsiChart"></canvas>
+            <!-- Horizontal Filter Bar -->
+            <section class="filter-bar card">
+                <div class="filter-controls">
+                    <div class="filter-group">
+                        <label for="filter-provinsi">Provinsi</label>
+                        <select id="filter-provinsi">
+                            <option value="">Semua Provinsi</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="filter-sektor">Sektor Pemulihan</label>
+                        <select id="filter-sektor">
+                            <option value="">Semua Sektor</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="filter-isu">Isu Pascabencana</label>
+                        <select id="filter-isu">
+                            <option value="">Semua Isu</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="filter-ro">RO (Rincian Output)</label>
+                        <select id="filter-ro">
+                            <option value="">Semua RO</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-actions">
+                        <button id="btn-reset-filter" class="btn-secondary">Reset Filter</button>
+                    </div>
                 </div>
             </section>
-        </div>
 
-        <!-- Data Table -->
-        <section class="table-section glass-card">
-            <div class="section-header">
-                <h2>📋 Data Rencana Aksi</h2>
-                <div class="table-actions">
-                    <input type="text" id="searchInput" placeholder="🔍 Cari..." class="search-input">
+            <!-- Summary Cards -->
+            <section class="summary-cards">
+                <div class="card stat-card primary-stat">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-details">
+                        <p class="stat-label">Total Anggaran Pemulihan</p>
+                        <h3 class="stat-value" id="stat-anggaran">Rp 0</h3>
+                        <p class="stat-insight" id="insight-anggaran">Fokus utama pemulihan</p>
+                    </div>
                 </div>
-            </div>
-            <div class="table-container">
-                <table id="dataTable">
-                    <thead>
-                        <tr>
-                            <th width="5%">No</th>
-                            <th width="15%">Provinsi / Kab</th>
-                            <th width="30%">Program & Rencana Aksi</th>
-                            <th width="20%">Sasaran</th>
-                            <th width="15%">Anggaran</th>
-                            <th width="15%" style="text-align:center;">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody">
-                        <!-- Dynamic Rows Here -->
-                    </tbody>
-                </table>
-                <div class="empty-state" id="emptyState">
-                    <div class="empty-icon">📭</div>
-                    <p>Tidak ada data yang ditemukan</p>
+                <div class="card stat-card">
+                    <div class="stat-icon">📋</div>
+                    <div class="stat-details">
+                        <p class="stat-label">Total Rencana Aksi</p>
+                        <h3 class="stat-value" id="stat-aksi">0</h3>
+                        <p class="stat-insight" id="insight-aksi">Intervensi terarah</p>
+                    </div>
                 </div>
-            </div>
-        </section>
-    </main>
+                <div class="card stat-card">
+                    <div class="stat-icon">🎯</div>
+                    <div class="stat-details">
+                        <p class="stat-label">Program / Kegiatan</p>
+                        <h3 class="stat-value" id="stat-program">0</h3>
+                        <p class="stat-insight" id="insight-program">Inisiatif strategis</p>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-icon">📍</div>
+                    <div class="stat-details">
+                        <p class="stat-label">Kab / Kota Terdampak</p>
+                        <h3 class="stat-value" id="stat-kabkota">0</h3>
+                        <p class="stat-insight" id="insight-kabkota">Jangkauan wilayah</p>
+                    </div>
+                </div>
+            </section>
 
-    <!-- Detail Modal -->
-    <div class="modal" id="detailModal">
-        <div class="modal-content glass-card" style="max-width: 900px; width: 90%;">
-            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem; margin-bottom: 1rem;">
-                <h3 style="margin: 0; color: var(--info);"><i class="fas fa-info-circle"></i> Detail Rencana Aksi</h3>
-                <button class="action-btn" onclick="closeDetailModal()" style="border: none; background: transparent; font-size: 1.5rem; cursor: pointer;">&times;</button>
-            </div>
-            <div class="modal-body" id="detailModalBody" style="max-height: 70vh; overflow-y: auto; padding-right: 10px;">
-                <!-- Dynamic modal content here -->
-            </div>
-            <div class="modal-footer" style="margin-top: 1.5rem; text-align: right; border-top: 1px solid var(--glass-border); padding-top: 1rem;">
-                <button type="button" class="btn btn-secondary" onclick="closeDetailModal()">Tutup</button>
-            </div>
-        </div>
+            <!-- Visual Analytics Grid (SMART Questions) -->
+            <section class="analytics-grid">
+                <!-- Row 1 -->
+                <div class="card chart-container">
+                    <div class="chart-header">
+                        <h3>Lintasan Anggaran Multi-Tahun (Kapan Kebutuhan Terbesar?)</h3>
+                        <p class="chart-subtitle">Phasing alokasi anggaran pemulihan tahun 2026 - 2028</p>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <canvas id="chart-tahun"></canvas>
+                    </div>
+                </div>
+                <div class="card chart-container">
+                    <div class="chart-header">
+                        <h3>Proporsi Kebutuhan Regional (Di Mana Paling Membutuhkan?)</h3>
+                        <p class="chart-subtitle">Perbandingan beban anggaran pemulihan antar provinsi</p>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <canvas id="chart-provinsi"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Row 2 -->
+                <div class="card chart-container">
+                    <div class="chart-header">
+                        <h3>Fokus Penanganan Sektor (Ekonomi vs Infrastruktur)</h3>
+                        <p class="chart-subtitle">Distribusi alokasi berdasarkan sektor pemulihan KKP</p>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <canvas id="chart-sektor"></canvas>
+                    </div>
+                </div>
+                <div class="card chart-container">
+                    <div class="chart-header">
+                        <h3>Top 5 Wilayah Padat Modal (Fokus Intervensi Utama)</h3>
+                        <p class="chart-subtitle">Kabupaten/Kota dengan alokasi anggaran terbesar</p>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <canvas id="chart-kabkota"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Data Table Section -->
+            <section class="table-section card">
+                <div class="table-header">
+                    <div class="table-title">
+                        <h3>Rincian Matriks Data Bappenas</h3>
+                        <p>Detail rencana aksi, lokasi, dan alokasi anggaran</p>
+                    </div>
+                    <div class="search-box">
+                        <input type="text" id="search-input" placeholder="Cari rencana aksi, program, atau lokasi...">
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table id="data-table">
+                        <thead>
+                            <tr>
+                                <th>Provinsi</th>
+                                <th>Kab/Kota</th>
+                                <th>Sektor</th>
+                                <th>Program / Kegiatan</th>
+                                <th>Rencana Aksi</th>
+                                <th>Sasaran</th>
+                                <th>2026</th>
+                                <th>2027</th>
+                                <th>2028</th>
+                                <th>Total Anggaran</th>
+                                <th>Mitra / Skema</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Data akan dimuat disini -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="pagination">
+                    <!-- Pagination controls -->
+                </div>
+            </section>
+        </main>
     </div>
 
-    <!-- Toast Notification -->
-    <div class="toast" id="toast">
-        <span class="toast-icon"></span>
-        <span class="toast-message"></span>
-    </div>
-
-    <footer class="footer">
-        <p>© 2026 Dashboard Monitoring Dampak Bencana Sumatera | Kementerian Kelautan dan Perikanan RI</p>
-    </footer>
-    <!-- Script dependencies -->
-    <script src="comprehensive-data.js"></script>
+    <!-- Data source and application logic -->
+    <script src="data.js"></script>
     <script src="script.js"></script>
-    <script src="export-functions.js"></script>
 </body>
 </html>

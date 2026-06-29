@@ -1,319 +1,509 @@
-let map;
-let programChart;
-let provinsiChart;
-let markers = [];
-
-const formatRupiah = (number) => {
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-    }).format(number);
-};
-
 document.addEventListener('DOMContentLoaded', () => {
-    initMap();
-    initFilters();
-    initDashboard();
-
-    document.getElementById('tahunFilter').addEventListener('change', applyFilters);
-    document.getElementById('provinsiFilter').addEventListener('change', applyFilters);
-    document.getElementById('kabupatenFilter').addEventListener('change', applyFilters);
-    document.getElementById('sektorFilter').addEventListener('change', applyFilters);
-});
-
-function initMap() {
-    map = L.map('map').setView([1.5, 98.5], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-}
-
-function initFilters() {
-    const kabs = new Set();
-    const sektors = new Set();
-
-    comprehensiveData.forEach(item => {
-        if (item.lokasi.kabupaten && item.lokasi.kabupaten !== "-") {
-            kabs.add(item.lokasi.kabupaten);
-        }
-        if (item.sektor && item.sektor !== "-") {
-            sektors.add(item.sektor);
-        }
-    });
-
-    const kabFilter = document.getElementById('kabupatenFilter');
-    Array.from(kabs).sort().forEach(kab => {
-        const option = document.createElement('option');
-        option.value = kab;
-        option.textContent = kab;
-        kabFilter.appendChild(option);
-    });
-
-    const sektorFilter = document.getElementById('sektorFilter');
-    Array.from(sektors).sort().forEach(sek => {
-        const option = document.createElement('option');
-        option.value = sek;
-        option.textContent = sek;
-        sektorFilter.appendChild(option);
-    });
-}
-
-function initDashboard() {
-    applyFilters();
-}
-
-function getBudgetByYear(item, selectedYear) {
-    if (selectedYear === 'Semua') {
-        return item.totalAnggaran || 0;
+    // Pastikan data tersedia dari data.js
+    if (typeof matriksBappenasData === 'undefined') {
+        console.error('Data matriksBappenasData tidak ditemukan!');
+        return;
     }
-    const yearData = item[`tahun${selectedYear}`];
-    return yearData ? (yearData.anggaran || 0) : 0;
-}
 
-function applyFilters() {
-    const tahun = document.getElementById('tahunFilter').value;
-    const provinsi = document.getElementById('provinsiFilter').value;
-    const kabupaten = document.getElementById('kabupatenFilter').value;
-    const sektor = document.getElementById('sektorFilter').value;
-
-    const filteredData = comprehensiveData.filter(item => {
-        let match = true;
-        if (provinsi !== 'Semua' && item.lokasi.provinsi !== provinsi) match = false;
-        if (kabupaten !== 'Semua' && item.lokasi.kabupaten !== kabupaten) match = false;
-        if (sektor !== 'Semua' && item.sektor !== sektor) match = false;
-        
-        // If specific year is selected, ensure it has budget > 0 for that year, or at least exists
-        if (tahun !== 'Semua') {
-            const b = getBudgetByYear(item, tahun);
-            if (b === 0 && (!item[`tahun${tahun}`] || !item[`tahun${tahun}`].output)) {
-                match = false; // no action planned for this year
-            }
-        }
-        return match;
-    });
-
-    updateSummary(filteredData, tahun);
-    updateCharts(filteredData, tahun);
-    renderTable(filteredData, tahun);
-    updateMap(filteredData, tahun);
-}
-
-function updateSummary(data, tahun) {
-    let totalBiaya = 0;
-    data.forEach(item => {
-        totalBiaya += getBudgetByYear(item, tahun);
-    });
-
-    document.getElementById('totalBiaya').textContent = formatRupiah(totalBiaya);
-    document.getElementById('totalVolume').textContent = data.length + " Aksi"; // Representing number of actions since volume units differ
-}
-
-function updateCharts(data, tahun) {
-    const sektorData = {};
-    const provinsiData = {};
-
-    data.forEach(item => {
-        const budget = getBudgetByYear(item, tahun);
-        if (budget > 0) {
-            // Sektor
-            sektorData[item.sektor] = (sektorData[item.sektor] || 0) + budget;
-            // Provinsi
-            provinsiData[item.lokasi.provinsi] = (provinsiData[item.lokasi.provinsi] || 0) + budget;
-        }
-    });
-
-    // Sektor Chart
-    const ctxProg = document.getElementById('programChart').getContext('2d');
-    if (programChart) programChart.destroy();
-    programChart = new Chart(ctxProg, {
-        type: 'doughnut',
-        data: {
-            labels: Object.keys(sektorData),
-            datasets: [{
-                data: Object.values(sektorData),
-                backgroundColor: ['#0284c7', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'],
-                borderWidth: 0
-            }]
+    // Konfigurasi State
+    const state = {
+        rawData: [],
+        filteredData: [],
+        currentPage: 1,
+        itemsPerPage: 15,
+        filters: {
+            provinsi: '',
+            sektor: '',
+            isu: '',
+            ro: '',
+            search: ''
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'right', labels: { boxWidth: 12 } },
-                tooltip: { callbacks: { label: (ctx) => ' ' + formatRupiah(ctx.raw) } }
-            }
+        charts: {
+            provinsi: null,
+            tahun: null,
+            sektor: null,
+            kabkota: null
         }
-    });
-
-    // Provinsi Chart
-    const ctxProv = document.getElementById('provinsiChart').getContext('2d');
-    if (provinsiChart) provinsiChart.destroy();
-    provinsiChart = new Chart(ctxProv, {
-        type: 'bar',
-        data: {
-            labels: Object.keys(provinsiData),
-            datasets: [{
-                label: 'Total Anggaran',
-                data: Object.values(provinsiData),
-                backgroundColor: '#0ea5e9',
-                borderRadius: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: { callbacks: { label: (ctx) => ' ' + formatRupiah(ctx.raw) } }
-            },
-            scales: {
-                y: { beginAtZero: true, ticks: { callback: (value) => 'Rp ' + (value / 1e9).toFixed(0) + ' M' } }
-            }
-        }
-    });
-}
-
-function renderTable(data, tahun) {
-    const tbody = document.getElementById('tableBody');
-    tbody.innerHTML = '';
-    
-    document.getElementById('emptyState').style.display = data.length === 0 ? 'block' : 'none';
-
-    data.forEach((item, index) => {
-        const budget = getBudgetByYear(item, tahun);
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${index + 1}</td>
-            <td>
-                <strong>${item.lokasi.provinsi}</strong><br>
-                <span style="font-size: 0.85rem; color: #64748b;">${item.lokasi.kabupaten}</span>
-            </td>
-            <td>
-                <div style="font-weight: 600; color: #0f172a; margin-bottom: 4px;">${item.program}</div>
-                <div style="font-size: 0.85rem; color: #64748b;">${item.rencanaAksi}</div>
-            </td>
-            <td><span class="badge" style="background: rgba(14, 165, 233, 0.1); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.2);">${item.sasaran || '-'}</span></td>
-            <td style="font-weight: 700; color: #059669;">${formatRupiah(budget)}</td>
-            <td style="text-align: center;">
-                <button class="btn btn-sm btn-primary" onclick="showDetail('${item.id}')">
-                    <i class="fas fa-list"></i> Rincian
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-window.showDetail = function(id) {
-    const item = comprehensiveData.find(i => i.id === id);
-    if (!item) return;
-
-    const modalBody = document.getElementById('detailModalBody');
-    modalBody.innerHTML = `
-        <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
-            <div class="glass-card" style="padding: 1.5rem; border: 1px solid var(--glass-border);">
-                <h4 style="color: var(--primary-gradient); margin-bottom: 1rem;"><i class="fas fa-bullseye"></i> Konteks & Sasaran</h4>
-                <div style="display: grid; grid-template-columns: 150px 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
-                    <strong style="color: var(--text-muted);">Isu / Dampak</strong>
-                    <span>${item.isu}</span>
-                </div>
-                <div style="display: grid; grid-template-columns: 150px 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
-                    <strong style="color: var(--text-muted);">Rincian Output</strong>
-                    <span>${item.ro}</span>
-                </div>
-                <div style="display: grid; grid-template-columns: 150px 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
-                    <strong style="color: var(--text-muted);">Sasaran</strong>
-                    <span style="color: var(--success); font-weight: bold;">${item.sasaran}</span>
-                </div>
-                <div style="display: grid; grid-template-columns: 150px 1fr; gap: 0.5rem;">
-                    <strong style="color: var(--text-muted);">Sektor</strong>
-                    <span>${item.sektor}</span>
-                </div>
-            </div>
-
-            <div class="glass-card" style="padding: 1.5rem; border: 1px solid var(--glass-border);">
-                <h4 style="color: var(--info); margin-bottom: 1rem;"><i class="fas fa-calendar-alt"></i> Timeline & Anggaran Pelaksanaan</h4>
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 1rem;">
-                    <thead>
-                        <tr style="background: rgba(0,0,0,0.05);">
-                            <th style="padding: 0.75rem; text-align: left; border: 1px solid #e2e8f0;">Tahun</th>
-                            <th style="padding: 0.75rem; text-align: left; border: 1px solid #e2e8f0;">Target Output</th>
-                            <th style="padding: 0.75rem; text-align: right; border: 1px solid #e2e8f0;">Anggaran</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td style="padding: 0.75rem; border: 1px solid #e2e8f0;">2026</td>
-                            <td style="padding: 0.75rem; border: 1px solid #e2e8f0;">${item.tahun2026.output || '-'}</td>
-                            <td style="padding: 0.75rem; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${formatRupiah(item.tahun2026.anggaran)}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 0.75rem; border: 1px solid #e2e8f0;">2027</td>
-                            <td style="padding: 0.75rem; border: 1px solid #e2e8f0;">${item.tahun2027.output || '-'}</td>
-                            <td style="padding: 0.75rem; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${formatRupiah(item.tahun2027.anggaran)}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 0.75rem; border: 1px solid #e2e8f0;">2028</td>
-                            <td style="padding: 0.75rem; border: 1px solid #e2e8f0;">${item.tahun2028.output || '-'}</td>
-                            <td style="padding: 0.75rem; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${formatRupiah(item.tahun2028.anggaran)}</td>
-                        </tr>
-                        <tr style="background: rgba(16, 185, 129, 0.1);">
-                            <td colspan="2" style="padding: 0.75rem; border: 1px solid #e2e8f0; font-weight: bold;">Total Anggaran</td>
-                            <td style="padding: 0.75rem; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: var(--success);">${formatRupiah(item.totalAnggaran)}</td>
-                        </tr>
-                    </tbody>
-                </table>
-                
-                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                    <span class="badge" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--glass-border);"><i class="fas fa-money-bill"></i> Sumber: ${item.sumberDana || '-'}</span>
-                    <span class="badge" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--glass-border);"><i class="fas fa-cogs"></i> Skema: ${item.skemaPelaksanaan || '-'}</span>
-                    <span class="badge" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--glass-border);"><i class="fas fa-handshake"></i> Mitra: ${item.mitra || '-'}</span>
-                </div>
-            </div>
-        </div>
-    `;
-
-    document.getElementById('detailModal').classList.add('show');
-}
-
-window.closeDetailModal = function() {
-    document.getElementById('detailModal').classList.remove('show');
-}
-
-function updateMap(data, tahun) {
-    markers.forEach(m => map.removeLayer(m));
-    markers = [];
-
-    const provCoords = {
-        'Aceh': [4.6951, 96.7494],
-        'Sumatera Utara': [2.1154, 99.5451],
-        'Sumatera Barat': [-0.7399, 100.8000]
     };
 
-    const provAgg = {};
-    data.forEach(item => {
-        const budget = getBudgetByYear(item, tahun);
-        const prov = item.lokasi.provinsi;
-        if (prov && budget > 0) {
-            if (!provAgg[prov]) provAgg[prov] = { budget: 0, aksi: 0 };
-            provAgg[prov].budget += budget;
-            provAgg[prov].aksi += 1;
-        }
-    });
+    // KKP Theme Colors for Charts
+    const colors = {
+        primary: '#03255C',
+        secondary: '#043685',
+        tertiary: '#1c4e99',
+        quaternary: '#4a7ec9',
+        accent: '#03545C'
+    };
+    
+    // Palette generator for charts with many categories
+    const chartPalette = [
+        '#03255C', '#03545C', '#043685', '#0284c7', '#1c4e99', '#4a7ec9', '#64748b', '#94a3b8'
+    ];
 
-    for (const [prov, stats] of Object.entries(provAgg)) {
-        if (provCoords[prov]) {
-            const marker = L.marker(provCoords[prov]).addTo(map);
-            marker.bindPopup(`
-                <div class="p-2">
-                    <h6 class="fw-bold mb-2">${prov}</h6>
-                    <div class="small mb-1"><strong>Total Aksi:</strong> ${stats.aksi} kegiatan</div>
-                    <div class="small text-success fw-bold"><strong>Anggaran:</strong> ${formatRupiah(stats.budget)}</div>
-                </div>
-            `);
-            markers.push(marker);
+    // Helper: Parse Rupiah string to Number
+    const parseRupiah = (str) => {
+        if (!str) return 0;
+        let cleanStr = str.replace(/[Rp\s,.]/g, '');
+        let val = parseInt(cleanStr, 10);
+        return isNaN(val) ? 0 : val;
+    };
+
+    // Helper: Format Number to Rupiah
+    const formatRupiah = (num) => {
+        if (num === 0) return '-';
+        if (num >= 1e12) return `Rp ${(num / 1e12).toFixed(2)} Triliun`;
+        if (num >= 1e9) return `Rp ${(num / 1e9).toFixed(2)} Miliar`;
+        if (num >= 1e6) return `Rp ${(num / 1e6).toFixed(2)} Juta`;
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(num);
+    };
+
+    // Data Initialization & Cleaning
+    const initializeData = () => {
+        state.rawData = matriksBappenasData.filter(item => {
+            // Filter out subtotal rows, headers, and shifted data
+            const noClean = (item.no || '').toLowerCase();
+            const isHeader = noClean.includes('jumlah') || 
+                             noClean === 'no' || 
+                             noClean.includes('rencana aksi');
+            
+            const isShifted = (item.sumberDana || '').toLowerCase() === 'unit' || 
+                              (item.anggaran2026 || '').toLowerCase() === 'unit';
+                              
+            const isColumnHeader = (item.isu || '').toLowerCase().includes('isu dan dampak') ||
+                                   (item.rencanaAksi || '').toLowerCase() === 'rencana aksi';
+
+            return item.provinsi && item.provinsi.trim() !== '' && 
+                   item.rencanaAksi && item.rencanaAksi.trim() !== '' &&
+                   !isHeader && !isShifted && !isColumnHeader;
+        }).map((item, index) => {
+            return {
+                ...item,
+                id: index,
+                numAnggaran2026: parseRupiah(item.anggaran2026),
+                numAnggaran2027: parseRupiah(item.anggaran2027),
+                numAnggaran2028: parseRupiah(item.anggaran2028),
+                numTotalAnggaran: parseRupiah(item.totalAnggaran)
+            };
+        });
+        
+        state.filteredData = [...state.rawData];
+    };
+
+    // Setup Filter Options
+    const setupFilters = () => {
+        const getUniqueValues = (key) => {
+            const values = state.rawData.map(item => item[key]?.trim()).filter(v => v);
+            return [...new Set(values)].sort();
+        };
+
+        const populateSelect = (elementId, values) => {
+            const select = document.getElementById(elementId);
+            values.forEach(val => {
+                const option = document.createElement('option');
+                option.value = val;
+                option.textContent = val.length > 80 ? val.substring(0, 80) + '...' : val;
+                select.appendChild(option);
+            });
+        };
+
+        populateSelect('filter-provinsi', getUniqueValues('provinsi'));
+        populateSelect('filter-sektor', getUniqueValues('sektor'));
+        populateSelect('filter-isu', getUniqueValues('isu'));
+        populateSelect('filter-ro', getUniqueValues('ro'));
+
+        // Event Listeners
+        document.getElementById('filter-provinsi').addEventListener('change', (e) => {
+            state.filters.provinsi = e.target.value;
+            applyFilters();
+        });
+        document.getElementById('filter-sektor').addEventListener('change', (e) => {
+            state.filters.sektor = e.target.value;
+            applyFilters();
+        });
+        document.getElementById('filter-isu').addEventListener('change', (e) => {
+            state.filters.isu = e.target.value;
+            applyFilters();
+        });
+        document.getElementById('filter-ro').addEventListener('change', (e) => {
+            state.filters.ro = e.target.value;
+            applyFilters();
+        });
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            state.filters.search = e.target.value.toLowerCase();
+            applyFilters();
+        });
+        document.getElementById('btn-reset-filter').addEventListener('click', () => {
+            document.getElementById('filter-provinsi').value = '';
+            document.getElementById('filter-sektor').value = '';
+            document.getElementById('filter-isu').value = '';
+            document.getElementById('filter-ro').value = '';
+            document.getElementById('search-input').value = '';
+            
+            state.filters = { provinsi: '', sektor: '', isu: '', ro: '', search: '' };
+            applyFilters();
+        });
+    };
+
+    // Helper to get anggaran
+    const getItemAnggaran = (item) => {
+        return item.numTotalAnggaran;
+    };
+
+    // Apply Filters and Re-render
+    const applyFilters = () => {
+        state.filteredData = state.rawData.filter(item => {
+            const matchProvinsi = !state.filters.provinsi || item.provinsi === state.filters.provinsi;
+            const matchSektor = !state.filters.sektor || item.sektor === state.filters.sektor;
+            const matchIsu = !state.filters.isu || item.isu === state.filters.isu;
+            const matchRO = !state.filters.ro || item.ro === state.filters.ro;
+            
+            const matchSearch = !state.filters.search || 
+                (item.rencanaAksi && item.rencanaAksi.toLowerCase().includes(state.filters.search)) ||
+                (item.kabKota && item.kabKota.toLowerCase().includes(state.filters.search)) ||
+                (item.program && item.program.toLowerCase().includes(state.filters.search));
+
+            return matchProvinsi && matchSektor && matchIsu && matchRO && matchSearch;
+        });
+
+        state.currentPage = 1;
+        updateDashboard();
+    };
+
+    // Render Summary Cards
+    const renderSummary = () => {
+        const totalAnggaran = state.filteredData.reduce((sum, item) => sum + getItemAnggaran(item), 0);
+        const programs = new Set(state.filteredData.map(item => item.program).filter(v => v));
+        const provs = new Set(state.filteredData.map(item => item.provinsi).filter(v => v));
+        const kabKotaSet = new Set();
+        
+        // Calculate sector distribution for narrative insight
+        const sektorSums = {};
+        state.filteredData.forEach(item => {
+            if (item.sektor) sektorSums[item.sektor] = (sektorSums[item.sektor] || 0) + getItemAnggaran(item);
+            if (item.kabKota) {
+                item.kabKota.split(/[,.]/).forEach(k => {
+                    const clean = k.trim();
+                    if (clean && clean.length > 2) kabKotaSet.add(clean);
+                });
+            }
+        });
+
+        let topSektor = '', maxSektorVal = 0;
+        Object.entries(sektorSums).forEach(([sek, val]) => {
+            if (val > maxSektorVal) { maxSektorVal = val; topSektor = sek; }
+        });
+        const topSektorPct = totalAnggaran > 0 ? Math.round((maxSektorVal / totalAnggaran) * 100) : 0;
+
+        document.getElementById('stat-anggaran').textContent = formatRupiah(totalAnggaran);
+        document.getElementById('stat-aksi').textContent = state.filteredData.length;
+        document.getElementById('stat-program').textContent = programs.size;
+        document.getElementById('stat-kabkota').textContent = kabKotaSet.size;
+
+        // Dynamic SMART storytelling insights
+        const elAnggaran = document.getElementById('insight-anggaran');
+        if (elAnggaran) elAnggaran.textContent = topSektor ? `Dominasi Sektor ${topSektor} (${topSektorPct}%)` : 'Tersebar merata';
+        
+        const elAksi = document.getElementById('insight-aksi');
+        if (elAksi) elAksi.textContent = `Meliputi ${provs.size} Provinsi terdampak`;
+
+        const elProgram = document.getElementById('insight-program');
+        if (elProgram) elProgram.textContent = `Rata-rata ${Math.round(state.filteredData.length / (programs.size || 1))} aksi/program`;
+
+        const elKabKota = document.getElementById('insight-kabkota');
+        if (elKabKota) elKabKota.textContent = `Tersebar di ${kabKotaSet.size} titik lokasi`;
+    };
+
+    // Helper formatting for charts
+    const chartNumberFormat = (val) => {
+        if (val >= 1e12) return (val / 1e12).toFixed(1) + 'T';
+        if (val >= 1e9) return (val / 1e9).toFixed(1) + 'M';
+        if (val >= 1e6) return (val / 1e6).toFixed(1) + 'Jt';
+        return val;
+    };
+
+    // Render Charts
+    const renderCharts = () => {
+        
+        // 1. Chart Provinsi (Doughnut)
+        const provData = {};
+        state.filteredData.forEach(item => {
+            if (!item.provinsi) return;
+            provData[item.provinsi] = (provData[item.provinsi] || 0) + getItemAnggaran(item);
+        });
+        
+        const provLabels = Object.keys(provData);
+        const provValues = Object.values(provData);
+
+        const ctxProv = document.getElementById('chart-provinsi').getContext('2d');
+        if (state.charts.provinsi) {
+            state.charts.provinsi.data.labels = provLabels;
+            state.charts.provinsi.data.datasets[0].data = provValues;
+            state.charts.provinsi.update();
+        } else {
+            state.charts.provinsi = new Chart(ctxProv, {
+                type: 'doughnut',
+                data: {
+                    labels: provLabels,
+                    datasets: [{
+                        data: provValues,
+                        backgroundColor: [colors.primary, colors.accent, colors.quaternary, '#cbd5e1'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '65%',
+                    plugins: {
+                        legend: { position: 'right', labels: { usePointStyle: true } },
+                        tooltip: {
+                            callbacks: { label: (context) => ` ${formatRupiah(context.raw)}` }
+                        }
+                    }
+                }
+            });
         }
-    }
-}
+
+        // 2. Chart Tahun (Bar)
+        let total2026 = 0, total2027 = 0, total2028 = 0;
+        state.filteredData.forEach(item => {
+            total2026 += item.numAnggaran2026;
+            total2027 += item.numAnggaran2027;
+            total2028 += item.numAnggaran2028;
+        });
+
+        const ctxTahun = document.getElementById('chart-tahun').getContext('2d');
+        if (state.charts.tahun) {
+            state.charts.tahun.data.datasets[0].data = [total2026, total2027, total2028];
+            state.charts.tahun.update();
+        } else {
+            state.charts.tahun = new Chart(ctxTahun, {
+                type: 'bar',
+                data: {
+                    labels: ['2026', '2027', '2028'],
+                    datasets: [{
+                        label: 'Alokasi Anggaran',
+                        data: [total2026, total2027, total2028],
+                        backgroundColor: colors.primary,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: (context) => formatRupiah(context.raw) } }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { callback: (val) => chartNumberFormat(val) }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 3. Chart Sektor (Pie)
+        const sektorData = {};
+        state.filteredData.forEach(item => {
+            if (!item.sektor) return;
+            sektorData[item.sektor] = (sektorData[item.sektor] || 0) + getItemAnggaran(item);
+        });
+
+        const ctxSektor = document.getElementById('chart-sektor').getContext('2d');
+        if (state.charts.sektor) {
+            state.charts.sektor.data.labels = Object.keys(sektorData);
+            state.charts.sektor.data.datasets[0].data = Object.values(sektorData);
+            state.charts.sektor.update();
+        } else {
+            state.charts.sektor = new Chart(ctxSektor, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(sektorData),
+                    datasets: [{
+                        data: Object.values(sektorData),
+                        backgroundColor: chartPalette,
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { usePointStyle: true } },
+                        tooltip: { callbacks: { label: (context) => ` ${formatRupiah(context.raw)}` } }
+                    }
+                }
+            });
+        }
+
+        // 4. Chart Top Kab/Kota (Horizontal Bar)
+        const kabKotaData = {};
+        state.filteredData.forEach(item => {
+            if (!item.kabKota) return;
+            // Handle multiple kabKota in one row for approximation
+            const kabKotas = item.kabKota.split(/[,.]/).map(k => k.trim()).filter(k => k.length > 2);
+            if (kabKotas.length > 0) {
+                const avgAnggaran = getItemAnggaran(item) / kabKotas.length;
+                kabKotas.forEach(k => {
+                    kabKotaData[k] = (kabKotaData[k] || 0) + avgAnggaran;
+                });
+            }
+        });
+
+        // Sort and get Top 5
+        const sortedKabKota = Object.entries(kabKotaData)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5);
+        
+        const kabKotaLabels = sortedKabKota.map(k => k[0]);
+        const kabKotaValues = sortedKabKota.map(k => k[1]);
+
+        const ctxKabKota = document.getElementById('chart-kabkota').getContext('2d');
+        if (state.charts.kabkota) {
+            state.charts.kabkota.data.labels = kabKotaLabels;
+            state.charts.kabkota.data.datasets[0].data = kabKotaValues;
+            state.charts.kabkota.update();
+        } else {
+            state.charts.kabkota = new Chart(ctxKabKota, {
+                type: 'bar',
+                data: {
+                    labels: kabKotaLabels,
+                    datasets: [{
+                        label: 'Anggaran (Estimasi)',
+                        data: kabKotaValues,
+                        backgroundColor: colors.accent,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: (context) => formatRupiah(context.raw) } }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { callback: (val) => chartNumberFormat(val) }
+                        }
+                    }
+                }
+            });
+        }
+    };
+
+    // Render Table
+    const renderTable = () => {
+        const tbody = document.getElementById('table-body');
+        tbody.innerHTML = '';
+
+        const startIdx = (state.currentPage - 1) * state.itemsPerPage;
+        const endIdx = startIdx + state.itemsPerPage;
+        const pageData = state.filteredData.slice(startIdx, endIdx);
+
+        if (pageData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; padding: 2rem;">Tidak ada data yang ditemukan.</td></tr>`;
+            renderPagination();
+            return;
+        }
+
+        pageData.forEach(item => {
+            const tr = document.createElement('tr');
+            
+            let badgeHtml = '';
+            if (item.skema) badgeHtml += `<span class="badge badge-blue" style="margin-bottom:4px; display:inline-block;">${item.skema}</span><br>`;
+            if (item.mitra) badgeHtml += `<span class="badge badge-gray" style="display:inline-block;">${item.mitra}</span>`;
+
+            tr.innerHTML = `
+                <td>${item.provinsi || '-'}</td>
+                <td class="cell-truncate" title="${item.kabKota}">${item.kabKota || '-'}</td>
+                <td><span class="badge badge-green">${item.sektor || '-'}</span></td>
+                <td class="cell-truncate" title="${item.program}">${item.program || '-'}</td>
+                <td class="cell-truncate" title="${item.rencanaAksi}" style="font-weight: 500;">${item.rencanaAksi || '-'}</td>
+                <td class="cell-truncate" title="${item.sasaran}">${item.sasaran || '-'}</td>
+                <td>
+                    <div style="font-size: 0.75rem; color: #475569;">${item.output2026 || ''}</div>
+                    <div>${item.numAnggaran2026 ? formatRupiah(item.numAnggaran2026) : '-'}</div>
+                </td>
+                <td>
+                    <div style="font-size: 0.75rem; color: #475569;">${item.output2027 || ''}</div>
+                    <div>${item.numAnggaran2027 ? formatRupiah(item.numAnggaran2027) : '-'}</div>
+                </td>
+                <td>
+                    <div style="font-size: 0.75rem; color: #475569;">${item.output2028 || ''}</div>
+                    <div>${item.numAnggaran2028 ? formatRupiah(item.numAnggaran2028) : '-'}</div>
+                </td>
+                <td style="font-weight: 600; color: #03255C;">${item.numTotalAnggaran ? formatRupiah(item.numTotalAnggaran) : '-'}</td>
+                <td>${badgeHtml || '-'}</td>
+            `;
+            tr.title = "Klik baris ini untuk melihat rincian detail record data";
+            tr.addEventListener('click', () => {
+                window.location.href = `detail.html?id=${item.id}`;
+            });
+            tbody.appendChild(tr);
+        });
+
+        renderPagination();
+    };
+
+    // Render Pagination
+    const renderPagination = () => {
+        const paginationContainer = document.getElementById('pagination');
+        paginationContainer.innerHTML = '';
+        
+        const totalItems = state.filteredData.length;
+        const totalPages = Math.ceil(totalItems / state.itemsPerPage);
+        
+        if (totalPages <= 1) return;
+
+        const info = document.createElement('div');
+        info.className = 'page-info';
+        const startIdx = (state.currentPage - 1) * state.itemsPerPage + 1;
+        const endIdx = Math.min(startIdx + state.itemsPerPage - 1, totalItems);
+        info.textContent = `Menampilkan ${startIdx}-${endIdx} dari ${totalItems} baris data`;
+        paginationContainer.appendChild(info);
+
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'page-btn';
+        prevBtn.textContent = 'Sebelumnya';
+        prevBtn.disabled = state.currentPage === 1;
+        prevBtn.addEventListener('click', () => {
+            if (state.currentPage > 1) {
+                state.currentPage--;
+                renderTable();
+            }
+        });
+        paginationContainer.appendChild(prevBtn);
+
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'page-btn';
+        nextBtn.textContent = 'Selanjutnya';
+        nextBtn.disabled = state.currentPage === totalPages;
+        nextBtn.addEventListener('click', () => {
+            if (state.currentPage < totalPages) {
+                state.currentPage++;
+                renderTable();
+            }
+        });
+        paginationContainer.appendChild(nextBtn);
+    };
+
+    // Master Update Function
+    const updateDashboard = () => {
+        renderSummary();
+        renderCharts();
+        renderTable();
+    };
+
+    // Initialize Application
+    initializeData();
+    setupFilters();
+    updateDashboard();
+});

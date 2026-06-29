@@ -1,6 +1,0 @@
-# Files tidak perlu di-deploy
-.git
-.gitignore
-*.md
-*.example
-seed-data copy.js.example
