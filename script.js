@@ -1155,79 +1155,98 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     /**
-     * Sheet 'Realisasi Anggaran' - bertingkat dua level:
+     * Sheet 'Realisasi Anggaran' berisi TIGA blok tabel bertumpuk:
      *
-     *   No                                  |                       | Target Volume | Target Anggaran (000) | ...
-     *   Pemulihan dan Operasionalisasi Bu... |                       | 525.921,00    | 70.419.096            |   <- kelompok
-     *                                        | - Bantuan Excavator   | 12            | 17.268.000            |   <- rincian
-     *   Total                                |                       |               | 155.316.812           |   <- total
+     *   (tanpa label)  <- gabungan, isinya persis ABT + Reguler
+     *   ABT
+     *   Reguler
      *
-     * Nama kelompok ada di kolom 0, nama rincian di kolom 1. Nilai anggaran
-     * ditulis dalam RIBUAN rupiah (lihat judul kolom "(000)"), jadi dikali 1000.
+     * Tiap blok berformat sama:
+     *
+     *   No        | Kegiatan | Taget  |                | Realisasi |           | %
+     *             |          | Volume | Anggaran (000) | Volume    | Anggaran  |     <- header 2 baris
+     *   Kelompok  |          | 5.800  | 70.419.096     | 950       | 18.635.795| 26,46
+     *             | - Rincian| 10     | 292.950        | 0         | 0         | 0
+     *   Total     |          |        | 155.316.812    |           | 24.503.035| 15,78
+     *
+     * Karena blok pertama hanyalah penjumlahan dua blok lainnya, ketiganya tidak
+     * ditampilkan bertumpuk (itu yang membuat sheet sulit dibaca) melainkan
+     * dijadikan satu tabel dengan pilihan sumber dana.
+     *
+     * Nilai anggaran ditulis dalam RIBUAN rupiah (judul kolom "(000)").
      */
     const parseRealisasi = (rows) => {
-        if (!rows || rows.length < 2) return null;
+        if (!rows || rows.length < 3) return null;
 
         const cell = (r, i) => cleanCell(r && r[i]);
+        const isHeaderVolume = (r) => /^volume$/i.test(cell(r, 2));
 
-        // Baris header dicari lewat isinya, karena sheet diawali baris kosong.
-        const iHeader = rows.findIndex(r => r.some(c => /target\s*volume/i.test(cleanCell(c))));
-        if (iHeader === -1) return null;
+        const blok = [];
+        let labelBerikut = '';
 
-        const header = rows[iHeader];
-        const kolom = (...pola) => {
-            for (const p of pola) {
-                const i = header.findIndex(c => p.test(cleanCell(c)));
-                if (i !== -1) return i;
-            }
-            return -1;
-        };
-        const cTargetVol = kolom(/target\s*volume/i);
-        const cTargetRp = kolom(/target\s*anggaran/i);
-        const cRealVol = kolom(/realisasi\s*volume/i);
-        const cRealRp = kolom(/realisasi\s*anggaran/i);
-        const cKet = kolom(/keterangan/i);
+        for (let i = 0; i < rows.length; i++) {
+            const r = rows[i];
 
-        // "(000)" pada judul kolom berarti nilainya dalam ribuan rupiah.
-        const ribuan = /\(0{3}\)/.test(cell(header, cTargetRp)) ? 1000 : 1;
-        const rp = (v) => parseRupiah(v) * ribuan;
-
-        const baris = [];
-        let target = 0, realisasi = 0, adaTotalSheet = false;
-
-        rows.slice(iHeader + 1).forEach(r => {
-            const kelompok = cell(r, 0);
-            const rincian = cell(r, 1);
-            if (!kelompok && !rincian) return;
-
-            const tRp = rp(cell(r, cTargetRp));
-            const rRp = rp(cell(r, cRealRp));
-
-            if (/^total$/i.test(kelompok)) {
-                adaTotalSheet = true;
-                return; // tidak ikut didaftar; totalnya dihitung dari baris kelompok
+            // Baris label blok: hanya kolom pertama terisi, teks pendek, bukan "Total".
+            const hanyaKolom0 = cell(r, 0) && r.slice(1).every(c => cleanCell(c) === '');
+            if (hanyaKolom0 && !/^total$/i.test(cell(r, 0)) && cell(r, 0).length < 30) {
+                labelBerikut = cell(r, 0);
+                continue;
             }
 
-            const isKelompok = Boolean(kelompok);
-            if (isKelompok) { target += tRp; realisasi += rRp; }
+            if (!isHeaderVolume(r)) continue;
 
-            baris.push({
-                level: isKelompok ? 'kelompok' : 'rincian',
-                nama: (isKelompok ? kelompok : rincian).replace(/^-\s*/, ''),
-                targetVolume: cell(r, cTargetVol),
-                realisasiVolume: cell(r, cRealVol),
-                targetAnggaran: tRp,
-                realisasiAnggaran: rRp,
-                // Persentase dihitung sendiri: kolom persen di sheet tidak konsisten
-                // (baris Total-nya berisi penjumlahan persen, bukan persentase).
-                persentase: tRp > 0 ? (rRp / tRp) * 100 : 0,
-                keterangan: cKet === -1 ? '' : cell(r, cKet)
-            });
-        });
+            // Baris di atasnya memuat "Anggaran (000)" -> nilai dalam ribuan.
+            const ribuan = /\(0{3}\)/.test(cell(r, 3)) ? 1000 : 1;
+            const rp = (v) => parseRupiah(v) * ribuan;
 
-        if (!baris.length) return null;
-        return { baris, target, realisasi, adaTotalSheet };
+            const baris = [];
+            let target = 0, realisasi = 0;
+
+            let j = i + 1;
+            for (; j < rows.length; j++) {
+                const d = rows[j];
+                const kelompok = cell(d, 0);
+                const rincian = cell(d, 1);
+
+                if (/^total$/i.test(kelompok)) { j++; break; }
+                if (isHeaderVolume(d)) { j--; break; }
+                if (!kelompok && !rincian) continue;
+
+                const tRp = rp(cell(d, 3));
+                const rRp = rp(cell(d, 5));
+                const isKelompok = Boolean(kelompok);
+
+                // Hanya baris kelompok yang dijumlahkan; rincian sudah tercakup
+                // di dalamnya, kalau ikut dijumlah totalnya jadi dua kali lipat.
+                if (isKelompok) { target += tRp; realisasi += rRp; }
+
+                baris.push({
+                    level: isKelompok ? 'kelompok' : 'rincian',
+                    nama: (isKelompok ? kelompok : rincian).replace(/^-\s*/, ''),
+                    targetVolume: cell(d, 2),
+                    realisasiVolume: cell(d, 4),
+                    targetAnggaran: tRp,
+                    realisasiAnggaran: rRp,
+                    persentase: tRp > 0 ? (rRp / tRp) * 100 : 0
+                });
+            }
+
+            if (baris.length) {
+                blok.push({
+                    nama: labelBerikut || 'Semua Sumber Dana',
+                    baris, target, realisasi,
+                    persentase: target > 0 ? (realisasi / target) * 100 : 0
+                });
+            }
+            labelBerikut = '';
+            i = j - 1;
+        }
+
+        return blok.length ? { blok } : null;
     };
+
+    const realisasiState = { blokAktif: 0, charts: { kelompok: null, sumber: null } };
 
     const renderRealisasi = () => {
         const section = document.getElementById('real-section');
@@ -1237,28 +1256,134 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!d) { section.hidden = true; return; }
         section.hidden = false;
 
-        const persen = d.target > 0 ? (d.realisasi / d.target) * 100 : 0;
-        setText('real-stat-target', d.target ? formatRupiah(d.target) : 'Rp 0');
-        setText('real-stat-realisasi', d.realisasi ? formatRupiah(d.realisasi) : 'Rp 0');
-        setText('real-stat-persen', persen.toFixed(2) + '%');
+        const blok = d.blok[realisasiState.blokAktif] || d.blok[0];
+        const sisa = Math.max(blok.target - blok.realisasi, 0);
 
+        setText('real-stat-target', blok.target ? formatRupiah(blok.target) : 'Rp 0');
+        setText('real-stat-realisasi', blok.realisasi ? formatRupiah(blok.realisasi) : 'Rp 0');
+        setText('real-stat-persen', blok.persentase.toFixed(2) + '%');
+        setText('real-stat-sisa', sisa ? formatRupiah(sisa) : 'Rp 0');
+
+        renderRealisasiCharts(blok, d.blok);
+        renderRealisasiTabel(blok);
+    };
+
+    const renderRealisasiCharts = (blok, semuaBlok) => {
+        // 1. Target vs Realisasi per kelompok kegiatan
+        const kelompok = blok.baris.filter(b => b.level === 'kelompok');
+        const labelPendek = (t) => (t.length > 34 ? t.slice(0, 32) + '...' : t);
+        const cv1 = document.getElementById('chart-real-kelompok');
+
+        if (cv1) {
+            const data = {
+                labels: kelompok.map(k => labelPendek(k.nama)),
+                datasets: [
+                    { label: 'Target', data: kelompok.map(k => k.targetAnggaran),
+                      backgroundColor: colors.primary, borderRadius: 4 },
+                    { label: 'Realisasi', data: kelompok.map(k => k.realisasiAnggaran),
+                      backgroundColor: colors.accent, borderRadius: 4 }
+                ]
+            };
+            if (realisasiState.charts.kelompok) {
+                realisasiState.charts.kelompok.data = data;
+                realisasiState.charts.kelompok.update();
+            } else {
+                realisasiState.charts.kelompok = new Chart(cv1.getContext('2d'), {
+                    type: 'bar',
+                    data,
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } },
+                            tooltip: { callbacks: { label: (c) => ' ' + c.dataset.label + ': ' + formatRupiah(c.raw) } }
+                        },
+                        scales: { x: { beginAtZero: true, ticks: { callback: (v) => chartNumberFormat(v) } } }
+                    }
+                });
+            }
+        }
+
+        // 2. Perbandingan antar sumber dana (blok gabungan dilewati)
+        const sumber = semuaBlok.filter(b => !/semua/i.test(b.nama));
+        const cv2 = document.getElementById('chart-real-sumber');
+
+        if (cv2 && sumber.length) {
+            const data = {
+                labels: sumber.map(b => b.nama + ' (' + b.persentase.toFixed(1) + '%)'),
+                datasets: [
+                    { label: 'Target', data: sumber.map(b => b.target),
+                      backgroundColor: colors.primary, borderRadius: 4 },
+                    { label: 'Realisasi', data: sumber.map(b => b.realisasi),
+                      backgroundColor: colors.accent, borderRadius: 4 }
+                ]
+            };
+            if (realisasiState.charts.sumber) {
+                realisasiState.charts.sumber.data = data;
+                realisasiState.charts.sumber.update();
+            } else {
+                realisasiState.charts.sumber = new Chart(cv2.getContext('2d'), {
+                    type: 'bar',
+                    data,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } },
+                            tooltip: { callbacks: { label: (c) => ' ' + c.dataset.label + ': ' + formatRupiah(c.raw) } }
+                        },
+                        scales: { y: { beginAtZero: true, ticks: { callback: (v) => chartNumberFormat(v) } } }
+                    }
+                });
+            }
+        }
+    };
+
+    const renderRealisasiTabel = (blok) => {
         const tbody = document.getElementById('real-body');
         if (!tbody) return;
 
         const rp = (n) => n ? formatRupiah(n) : '-';
-        tbody.innerHTML = d.baris.map(b => {
+
+        tbody.innerHTML = blok.baris.map(b => {
             const kelompok = b.level === 'kelompok';
+            const pct = Math.min(b.persentase, 100);
+            // Bar tipis lebih cepat dibaca daripada deretan angka persen.
+            const bar =
+                '<div class="serap">' +
+                    '<div class="serap-rel"><span style="width:' + pct.toFixed(1) + '%"></span></div>' +
+                    '<span class="serap-teks">' + b.persentase.toFixed(1) + '%</span>' +
+                '</div>';
+
             return '<tr class="' + (kelompok ? 'baris-kelompok' : 'baris-rincian') + '">' +
                 '<td class="cell-truncate" title="' + esc(b.nama) + '">' + dash(b.nama) + '</td>' +
                 '<td class="num">' + dash(b.targetVolume) + '</td>' +
                 '<td class="num">' + rp(b.targetAnggaran) + '</td>' +
                 '<td class="num">' + dash(b.realisasiVolume) + '</td>' +
                 '<td class="num">' + rp(b.realisasiAnggaran) + '</td>' +
-                '<td class="num"><span class="badge ' + progresBadge(b.persentase) + '">' +
-                    b.persentase.toFixed(2) + '%</span></td>' +
-                '<td>' + (b.keterangan ? '<span class="badge badge-gray">' + esc(b.keterangan) + '</span>' : '-') + '</td>' +
+                '<td>' + bar + '</td>' +
             '</tr>';
         }).join('');
+    };
+
+    const setupRealisasi = () => {
+        const d = store.realisasi;
+        const sel = document.getElementById('real-filter-sumber');
+        if (!d || !sel) return;
+
+        sel.innerHTML = '';
+        d.blok.forEach((b, i) => {
+            const o = document.createElement('option');
+            o.value = String(i);
+            o.textContent = b.nama;
+            sel.appendChild(o);
+        });
+
+        sel.addEventListener('change', (e) => {
+            realisasiState.blokAktif = parseInt(e.target.value, 10) || 0;
+            renderRealisasi();
+        });
     };
 
     // =========================================================================
@@ -1456,9 +1581,9 @@ document.addEventListener('DOMContentLoaded', () => {
         setupProgres();
         setupBerita();
         renderAnggaran();
+        setupRealisasi();
         renderRealisasi();
         renderDokumentasi();
-
 
         syncMenuVisibility();
     };

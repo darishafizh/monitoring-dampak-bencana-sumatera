@@ -850,3 +850,39 @@ tbody tr:hover {
     padding-left: var(--space-6);
     color: var(--text-muted);
 }
+
+/* Bar serapan pada tabel realisasi: lebih cepat dibaca daripada angka persen saja */
+.serap {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 140px;
+}
+
+.serap-rel {
+    flex: 1;
+    height: 8px;
+    background-color: var(--border);
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.serap-rel span {
+    display: block;
+    height: 100%;
+    background-color: var(--accent);
+    border-radius: 9999px;
+}
+
+.serap-teks {
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+    min-width: 46px;
+    text-align: right;
+}
+
+.baris-kelompok .serap-rel span {
+    background-color: var(--primary);
+}

@@ -406,6 +406,16 @@
 
             <!-- Realisasi: sheet 'Realisasi Anggaran', digabung ke menu Anggaran -->
             <section id="real-section" hidden>
+
+                <div class="card filter-bar" style="margin-bottom: var(--space-5);">
+                    <div class="filter-controls">
+                        <div class="filter-group">
+                            <label for="real-filter-sumber">Sumber Dana</label>
+                            <select id="real-filter-sumber"></select>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="summary-cards" style="margin-bottom: var(--space-5);">
                     <div class="card stat-card primary-stat">
                         <div class="stat-icon">&#127919;</div>
@@ -424,8 +434,36 @@
                     <div class="card stat-card">
                         <div class="stat-icon">&#128202;</div>
                         <div class="stat-details">
-                            <p class="stat-label">Persentase Realisasi</p>
+                            <p class="stat-label">Serapan</p>
                             <h3 class="stat-value" id="real-stat-persen">0%</h3>
+                        </div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-icon">&#8987;</div>
+                        <div class="stat-details">
+                            <p class="stat-label">Belum Terserap</p>
+                            <h3 class="stat-value" id="real-stat-sisa">Rp 0</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analytics-grid" style="margin-bottom: var(--space-5);">
+                    <div class="card chart-container">
+                        <div class="chart-header">
+                            <h3>Target vs Realisasi per Kelompok Kegiatan</h3>
+                            <p class="chart-subtitle">Mengikuti pilihan sumber dana di atas</p>
+                        </div>
+                        <div class="canvas-wrapper">
+                            <canvas id="chart-real-kelompok"></canvas>
+                        </div>
+                    </div>
+                    <div class="card chart-container">
+                        <div class="chart-header">
+                            <h3>Perbandingan Sumber Dana</h3>
+                            <p class="chart-subtitle">Serapan ABT dibanding Reguler</p>
+                        </div>
+                        <div class="canvas-wrapper">
+                            <canvas id="chart-real-sumber"></canvas>
                         </div>
                     </div>
                 </div>
@@ -433,8 +471,8 @@
                 <div class="card table-section">
                     <div class="table-header">
                         <div class="table-title">
-                            <h3>Realisasi Anggaran</h3>
-                            <p>Sumber: sheet <em>Realisasi Anggaran</em> - nilai anggaran sheet ditulis dalam ribuan rupiah dan sudah dikonversi</p>
+                            <h3>Rincian Realisasi Anggaran</h3>
+                            <p>Sumber: sheet <em>Realisasi Anggaran</em> - nilai anggaran pada sheet ditulis dalam ribuan rupiah dan sudah dikonversi</p>
                         </div>
                     </div>
                     <div class="table-responsive">
@@ -446,8 +484,7 @@
                                     <th class="num">Target Anggaran</th>
                                     <th class="num">Realisasi Volume</th>
                                     <th class="num">Realisasi Anggaran</th>
-                                    <th class="num">Persentase</th>
-                                    <th>Keterangan</th>
+                                    <th>Serapan</th>
                                 </tr>
                             </thead>
                             <tbody id="real-body"></tbody>
