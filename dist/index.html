@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>KKP - Rehabilitasi Pascabencana Sumatera</title>
-    <link rel="icon" type="image/png" href="logo-kkp.png">
+    <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
+    <link rel="apple-touch-icon" href="logo-kkp.png">
 
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -37,7 +38,7 @@
                 <button class="nav-link" data-page="aksi">Rencana Aksi</button>
                 <button class="nav-link" data-page="progres">Progres</button>
                 <button class="nav-link" data-page="anggaran">Anggaran</button>
-                <button class="nav-link" data-page="realisasi">Realisasi Anggaran</button>
+                <button class="nav-link" data-page="dokumentasi">Dokumentasi</button>
                 <button class="nav-link" data-page="berita">Berita</button>
             </nav>
         </div>
@@ -326,27 +327,20 @@
         </main>
 
         <!-- ============================================================= -->
-        <!-- MENU 5: REALISASI ANGGARAN   <- sheet 'Realisasi Anggaran'    -->
-        <!-- Kolomnya dirender apa adanya mengikuti header sheet.          -->
+        <!-- MENU 5: DOKUMENTASI   <- sheet 'Dokumentasi'                  -->
+        <!-- Kolom "Dokumentasi Before" & "Dokumentasi After" berisi tautan -->
+        <!-- Google Drive; ditampilkan sebagai pratinjau gambar, bukan link -->
         <!-- ============================================================= -->
-        <main class="main-content page" id="page-realisasi">
-            <section class="table-section card">
+        <main class="main-content page" id="page-dokumentasi">
+            <section class="card table-section" id="dok-section">
                 <div class="table-header">
                     <div class="table-title">
-                        <h3>Realisasi Anggaran</h3>
-                        <p>Sumber: sheet <em>Realisasi Anggaran</em></p>
+                        <h3>Dokumentasi</h3>
+                        <p>Sumber: sheet <em>Dokumentasi</em> - perbandingan kondisi sebelum dan sesudah penanganan</p>
                     </div>
-                    <div class="search-box">
-                        <input type="text" id="real-search" placeholder="Cari pada seluruh kolom...">
-                    </div>
+                    <span class="badge badge-blue" id="dok-count">0 dokumentasi</span>
                 </div>
-                <div class="table-responsive">
-                    <table>
-                        <thead id="real-head"></thead>
-                        <tbody id="real-body"></tbody>
-                    </table>
-                </div>
-                <div class="pagination" id="real-pagination"></div>
+                <ul class="dok-list" id="dok-list"></ul>
             </section>
         </main>
 

@@ -2958,5 +2958,31 @@ const anggaranRows = [
 // Baris mentah: elemen [0] = header, sisanya data. Kosong = menu tidak ditampilkan.
 const rencanaAksiRows = [];
 
-// Sheet 'Realisasi Anggaran' - masih kosong di spreadsheet.
-const realisasiAnggaranRows = [];
+// Sheet 'Dokumentasi' - baris mentah: [Dokumentasi Before, Dokumentasi After].
+// Diisi ulang saat snapshot diperbarui dari spreadsheet.
+const dokumentasiRows_snapshot = [
+  [
+    "Dokumentasi Before",
+    "Dokumentasi After"
+  ],
+  [
+    "https://drive.google.com/file/d/1vtoqTPDDRTG72XE4qCxyKCQJFzhu06bJ/view?usp=sharing",
+    "https://drive.google.com/file/d/1nXDls0R80M3attmNoJk2vFRfgPxaPc12/view?usp=sharing"
+  ],
+  [
+    "https://drive.google.com/file/d/11Nkd1xh-IU0yG_SzCyhR_XAxM5o-jmk_/view?usp=sharing",
+    "https://drive.google.com/file/d/1shhr9DJ57skDSigl6DWAX9YJnbU-n6cD/view?usp=sharing"
+  ],
+  [
+    "https://drive.google.com/file/d/1XJ0cB8KZUB0QJZdlWRC_CjhF__sr4LFw/view?usp=sharing",
+    "https://drive.google.com/file/d/183COrFiB0MAgXdkvntFHpKqzF2CuBXwo/view?usp=sharing"
+  ],
+  [
+    "https://drive.google.com/file/d/1bPwE0NMukLlZsdaSKaEbVigC5LEWbwhL/view?usp=sharing",
+    "https://drive.google.com/file/d/1yNmGuOI7bolkJSjyYMPbd0wQyDr9n7wS/view?usp=sharing"
+  ],
+  [
+    "https://drive.google.com/file/d/1wUSTyf8ZtJXsFVyl0Az8d4I0WtzmV2xR/view?usp=sharing",
+    "https://drive.google.com/file/d/10uMsnwisnI9VbyyZkqM79_ZSzOzTtYA6/view?usp=sharing"
+  ]
+];

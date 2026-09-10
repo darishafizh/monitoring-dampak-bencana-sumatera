@@ -752,3 +752,90 @@ tbody tr:hover {
 .berita-dok--mati:hover {
     text-decoration: none;
 }
+
+/* Galeri dokumentasi before/after (menu Dokumentasi) */
+.dok-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+}
+
+.dok-pasangan {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    background-color: var(--background);
+}
+
+.dok-nomor {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background-color: var(--primary);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dok-banding {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--space-4);
+    min-width: 0;
+}
+
+.dok-sisi {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+.dok-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+}
+
+.dok-sisi img {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background-color: var(--surface);
+    display: block;
+}
+
+/* Pesan pengganti saat berkas Drive tidak dapat dimuat */
+.dok-gagal {
+    display: none;
+    font-size: 0.75rem;
+    color: var(--text-light);
+    font-style: italic;
+    background-color: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-sm);
+    padding: var(--space-4);
+    text-align: center;
+}
+
+.dok-sisi--kosong .dok-gagal,
+.dok-sisi.is-gagal .dok-gagal {
+    display: block;
+}
+
+.dok-sisi.is-gagal a {
+    display: none;
+}

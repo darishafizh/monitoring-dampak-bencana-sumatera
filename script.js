@@ -8,7 +8,7 @@
  *   Rencana Aksi        <- sheet 'Rencana Aksi'
  *   Progres             <- sheet 'Progres'
  *   Anggaran            <- sheet 'Anggaran'
- *   Realisasi Anggaran  <- sheet 'Realisasi Anggaran'
+ *   Dokumentasi         <- sheet 'Dokumentasi'
  *   Berita              <- sheet 'Berita'
  *
  * Sumber data live = Google Spreadsheet (lihat config.js). Bila tidak dapat diakses,
@@ -78,6 +78,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return ['–', '—', '�', '-'].includes(v) ? '' : v;
     };
 
+    /** Ambil file id dari URL Google Drive (/file/d/<id>/... atau ?id=<id>). */
+    const driveFileId = (url) => {
+        const s = String(url || '');
+        const m = s.match(/\/file\/d\/([^/?#]+)/) || s.match(/[?&]id=([^&#]+)/);
+        return m ? m[1] : '';
+    };
+
     const dash = (str) => {
         const v = String(str ?? '').trim();
         return v === '' ? '-' : esc(v);
@@ -138,7 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
         aksiRows: [],       // sheet 'Rencana Aksi'        (baris mentah)
         progres: [],        // sheet 'Progres'
         anggaran: null,     // sheet 'Anggaran'            (blok laporan)
-        realisasiRows: [],  // sheet 'Realisasi Anggaran'  (baris mentah)
+        dokumentasiRows: [], // sheet 'Dokumentasi'        (baris mentah: Before | After)
+        dokumentasi: [],    // hasil normalisasi pasangan before/after
         berita: [],         // sheet 'Berita'
         liveSheets: [],
         sheetKosong: []
@@ -153,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { page: 'aksi',      ada: () => store.aksiRows.length > 1 },
         { page: 'progres',   ada: () => store.progres.length > 0 },
         { page: 'anggaran',  ada: () => store.anggaran !== null },
-        { page: 'realisasi', ada: () => store.realisasiRows.length > 1 },
+        { page: 'dokumentasi', ada: () => store.dokumentasi.length > 0 },
         { page: 'berita',    ada: () => store.berita.length > 0 }
     ];
 
@@ -300,13 +308,13 @@ document.addEventListener('DOMContentLoaded', () => {
         store.liveSheets = [];
         store.sheetKosong = [];
 
-        const [terdampak, aksiRows, progres, anggaranLive, realisasiRows, berita] =
+        const [terdampak, aksiRows, progres, anggaranLive, dokumentasiRows, berita] =
             await Promise.all([
                 SheetsLoader.fetchSheet(S.lokasiTerdampak, MAPPING_TERDAMPAK),
                 SheetsLoader.fetchRows(S.rencanaAksi),
                 SheetsLoader.fetchSheet(S.progres, MAPPING_PROGRES),
                 SheetsLoader.fetchRows(S.anggaran),
-                SheetsLoader.fetchRows(S.realisasiAnggaran),
+                SheetsLoader.fetchRows(S.dokumentasi),
                 SheetsLoader.fetchSheet(S.berita, MAPPING_BERITA)
             ]);
 
@@ -319,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
         catat(aksiRows, S.rencanaAksi.name);
         catat(progres, S.progres.name);
         catat(anggaranLive, S.anggaran.name);
-        catat(realisasiRows, S.realisasiAnggaran.name);
+        catat(dokumentasiRows, S.dokumentasi.name);
         catat(berita, S.berita.name);
 
         // Fallback selalu ke snapshot SHEET YANG SAMA, tidak pernah ke sheet lain.
@@ -329,14 +337,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const snapAksi = typeof rencanaAksiRows !== 'undefined' ? rencanaAksiRows : [];
         const snapProgres = typeof progresData !== 'undefined' ? progresData : [];
         const snapAnggaran = typeof anggaranRows !== 'undefined' ? anggaranRows : null;
-        const snapRealisasi = typeof realisasiAnggaranRows !== 'undefined' ? realisasiAnggaranRows : [];
+        const snapDokumentasi = typeof dokumentasiRows_snapshot !== 'undefined' ? dokumentasiRows_snapshot : [];
         const snapBerita = typeof beritaData !== 'undefined' ? beritaData : [];
 
         store.terdampak = normalizeTerdampak(terdampak || snapTerdampak);
         store.aksiRows = aksiRows || snapAksi;
         store.progres = normalizeProgres(progres || snapProgres);
         store.anggaran = parseAnggaran(anggaranLive || snapAnggaran);
-        store.realisasiRows = realisasiRows || snapRealisasi;
+        store.dokumentasiRows = dokumentasiRows || snapDokumentasi;
+        store.dokumentasi = normalizeDokumentasi(store.dokumentasiRows);
         store.berita = normalizeBerita(berita || snapBerita);
 
         updateDataSourceBadge();
@@ -344,8 +353,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // =========================================================================
     // Tabel generik - merender sheet apa adanya sesuai header aslinya.
-    // Dipakai menu 'Rencana Aksi' dan 'Realisasi Anggaran', yang strukturnya
-    // ditentukan sepenuhnya oleh isi sheet-nya masing-masing.
+    // Dipakai menu 'Rencana Aksi', yang strukturnya ditentukan sepenuhnya
+    // oleh isi sheet-nya sendiri.
     // =========================================================================
 
     const buatTabelGenerik = ({ headId, bodyId, paginationId, searchId }) => {
@@ -402,7 +411,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     let tabelAksi = null;
-    let tabelRealisasi = null;
 
     // =========================================================================
     // MENU 1 - LOKASI TERDAMPAK
@@ -952,16 +960,87 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // =========================================================================
+    // MENU 5 - DOKUMENTASI
+    //
+    // Sheet 'Dokumentasi' berisi dua kolom tautan Google Drive:
+    //   Dokumentasi Before | Dokumentasi After
+    // Tautannya tidak ditampilkan mentah - tiap berkas dirender sebagai
+    // pratinjau gambar lewat endpoint thumbnail Drive.
+    // =========================================================================
+
+    const normalizeDokumentasi = (rows) => {
+        if (!rows || rows.length < 2) return [];
+
+        const header = (rows[0] || []).map(h => cleanCell(h).toLowerCase());
+        const cariKolom = (kata, fallback) => {
+            const i = header.findIndex(h => h.includes(kata));
+            return i === -1 ? fallback : i;
+        };
+        const iBefore = cariKolom('before', 0);
+        const iAfter = cariKolom('after', 1);
+
+        const sisi = (url) => {
+            const u = cleanCell(url);
+            const fid = driveFileId(u);
+            return {
+                url: u,
+                gambar: fid ? `https://drive.google.com/thumbnail?id=${fid}&sz=w1000` : ''
+            };
+        };
+
+        return rows.slice(1)
+            .map((r, index) => ({
+                id: index,
+                no: index + 1,
+                before: sisi(r[iBefore]),
+                after: sisi(r[iAfter])
+            }))
+            .filter(d => d.before.url || d.after.url);
+    };
+
+    const renderDokumentasi = () => {
+        const list = document.getElementById('dok-list');
+        if (!list) return;
+
+        const items = store.dokumentasi;
+        setText('dok-count', `${items.length} dokumentasi`);
+
+        if (!items.length) {
+            list.innerHTML = `<li class="table-empty"><strong>Belum ada dokumentasi pada sheet.</strong></li>`;
+            return;
+        }
+
+        // Gambar yang gagal dimuat (berkas Drive belum dishare publik) diganti
+        // pesan agar tidak menyisakan kotak kosong tanpa penjelasan.
+        const sisi = (d, label) => {
+            if (!d.url) return `<div class="dok-sisi dok-sisi--kosong"><span class="dok-label">${label}</span>
+                <div class="dok-gagal">Belum diisi</div></div>`;
+            if (!d.gambar) return `<div class="dok-sisi"><span class="dok-label">${label}</span>
+                <div class="dok-gagal">Tautan bukan berkas Google Drive</div></div>`;
+            return `<div class="dok-sisi">
+                <span class="dok-label">${label}</span>
+                <a href="${esc(d.url)}" target="_blank" rel="noopener noreferrer" title="Buka berkas asli di Google Drive">
+                    <img src="${esc(d.gambar)}" alt="Dokumentasi ${label}" loading="lazy"
+                         onerror="this.closest('.dok-sisi').classList.add('is-gagal')">
+                </a>
+                <div class="dok-gagal">Gambar tidak dapat dimuat - berkas Drive belum dishare publik</div>
+            </div>`;
+        };
+
+        list.innerHTML = items.map(d => `
+            <li class="dok-pasangan">
+                <span class="dok-nomor">${d.no}</span>
+                <div class="dok-banding">
+                    ${sisi(d.before, 'Before')}
+                    ${sisi(d.after, 'After')}
+                </div>
+            </li>`).join('');
+    };
+
+    // =========================================================================
     // MENU 6 - BERITA
     // Satu kartu = satu baris sheet: info publikasi + kliping dokumentasinya.
     // =========================================================================
-
-    /** Ambil file id dari URL Google Drive (/file/d/<id>/... atau ?id=<id>). */
-    const driveFileId = (url) => {
-        const s = String(url || '');
-        const m = s.match(/\/file\/d\/([^/?#]+)/) || s.match(/[?&]id=([^&#]+)/);
-        return m ? m[1] : '';
-    };
 
     const normalizeBerita = (rows) => rows
         .map((item, index) => {
@@ -1074,17 +1153,13 @@ document.addEventListener('DOMContentLoaded', () => {
         setupProgres();
         setupBerita();
         renderAnggaran();
+        renderDokumentasi();
 
         tabelAksi = buatTabelGenerik({
             headId: 'aksi-head', bodyId: 'aksi-body',
             paginationId: 'aksi-pagination', searchId: 'aksi-search'
         });
-        tabelRealisasi = buatTabelGenerik({
-            headId: 'real-head', bodyId: 'real-body',
-            paginationId: 'real-pagination', searchId: 'real-search'
-        });
         tabelAksi.setRows(store.aksiRows);
-        tabelRealisasi.setRows(store.realisasiRows);
 
         syncMenuVisibility();
     };
@@ -1116,9 +1191,9 @@ document.addEventListener('DOMContentLoaded', () => {
         applyTerdampakFilters();
         applyProgresFilters();
         renderAnggaran();
+        renderDokumentasi();
         renderBerita();
         if (tabelAksi) tabelAksi.setRows(store.aksiRows);
-        if (tabelRealisasi) tabelRealisasi.setRows(store.realisasiRows);
 
         syncMenuVisibility();
         btn.disabled = false;
