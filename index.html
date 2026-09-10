@@ -164,26 +164,120 @@
 
         <!-- ============================================================= -->
         <!-- MENU 2: RENCANA AKSI   <- sheet 'Rencana Aksi'                -->
-        <!-- Kolomnya dirender apa adanya mengikuti header sheet.          -->
         <!-- ============================================================= -->
         <main class="main-content page" id="page-aksi">
+
+            <section class="filter-bar card">
+                <div class="filter-controls">
+                    <div class="filter-group">
+                        <label for="ra-filter-provinsi">Provinsi</label>
+                        <select id="ra-filter-provinsi">
+                            <option value="">Semua Provinsi</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="ra-filter-kegiatan">Kegiatan</label>
+                        <select id="ra-filter-kegiatan">
+                            <option value="">Semua Kegiatan</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="ra-filter-sumber">Sumber Pembiayaan</label>
+                        <select id="ra-filter-sumber">
+                            <option value="">Semua Sumber</option>
+                        </select>
+                    </div>
+                    <div class="filter-actions">
+                        <button id="ra-btn-reset" class="btn-secondary">Reset Filter</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="summary-cards">
+                <div class="card stat-card primary-stat">
+                    <div class="stat-icon">&#128176;</div>
+                    <div class="stat-details">
+                        <p class="stat-label">Total Anggaran</p>
+                        <h3 class="stat-value" id="ra-stat-anggaran">Rp 0</h3>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-icon">&#128203;</div>
+                    <div class="stat-details">
+                        <p class="stat-label">Jumlah Rencana Aksi</p>
+                        <h3 class="stat-value" id="ra-stat-aksi">0</h3>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-icon">&#127919;</div>
+                    <div class="stat-details">
+                        <p class="stat-label">Jenis Kegiatan</p>
+                        <h3 class="stat-value" id="ra-stat-kegiatan">0</h3>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-icon">&#128205;</div>
+                    <div class="stat-details">
+                        <p class="stat-label">Kab/Kota Terjangkau</p>
+                        <h3 class="stat-value" id="ra-stat-kabkota">0</h3>
+                    </div>
+                </div>
+            </section>
+
+            <section class="analytics-grid">
+                <div class="card chart-container">
+                    <div class="chart-header">
+                        <h3>Alokasi Anggaran per Tahun</h3>
+                        <p class="chart-subtitle">Phasing kebutuhan anggaran 2026 - 2028</p>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <canvas id="chart-ra-tahun"></canvas>
+                    </div>
+                </div>
+                <div class="card chart-container">
+                    <div class="chart-header">
+                        <h3>Proporsi Anggaran per Provinsi</h3>
+                        <p class="chart-subtitle">Sebaran total anggaran antar provinsi terdampak</p>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <canvas id="chart-ra-provinsi"></canvas>
+                    </div>
+                </div>
+            </section>
+
             <section class="table-section card">
                 <div class="table-header">
                     <div class="table-title">
-                        <h3>Rencana Aksi</h3>
+                        <h3>Rincian Rencana Aksi</h3>
                         <p>Sumber: sheet <em>Rencana Aksi</em></p>
                     </div>
                     <div class="search-box">
-                        <input type="text" id="aksi-search" placeholder="Cari pada seluruh kolom...">
+                        <input type="text" id="ra-search" placeholder="Cari program, kegiatan, atau lokasi...">
                     </div>
                 </div>
                 <div class="table-responsive">
-                    <table>
-                        <thead id="aksi-head"></thead>
-                        <tbody id="aksi-body"></tbody>
+                    <table id="ra-table">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Provinsi</th>
+                                <th>Program</th>
+                                <th>Kegiatan</th>
+                                <th>Lokasi (Kab/Kota)</th>
+                                <th>Sumber Pembiayaan</th>
+                                <th>Output 2026</th>
+                                <th class="num">Anggaran 2026</th>
+                                <th>Output 2027</th>
+                                <th class="num">Anggaran 2027</th>
+                                <th>Output 2028</th>
+                                <th class="num">Anggaran 2028</th>
+                                <th class="num">Total Anggaran</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ra-table-body"></tbody>
                     </table>
                 </div>
-                <div class="pagination" id="aksi-pagination"></div>
+                <div class="pagination" id="ra-pagination"></div>
             </section>
         </main>
 

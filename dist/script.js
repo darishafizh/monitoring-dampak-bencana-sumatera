@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const store = {
         terdampak: [],      // sheet 'Lokasi Terdampak'
-        aksiRows: [],       // sheet 'Rencana Aksi'        (baris mentah)
+        aksi: [],           // sheet 'Rencana Aksi'
         progres: [],        // sheet 'Progres'
         anggaran: null,     // sheet 'Anggaran'            (blok laporan)
         dokumentasiRows: [], // sheet 'Dokumentasi'        (baris mentah: Before | After)
@@ -158,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const MENUS = [
         { page: 'terdampak', ada: () => store.terdampak.length > 0 },
-        { page: 'aksi',      ada: () => store.aksiRows.length > 1 },
+        { page: 'aksi',      ada: () => store.aksi.length > 0 },
         { page: 'progres',   ada: () => store.progres.length > 0 },
         { page: 'anggaran',  ada: () => store.anggaran !== null },
         { page: 'dokumentasi', ada: () => store.dokumentasi.length > 0 },
@@ -239,6 +239,22 @@ document.addEventListener('DOMContentLoaded', () => {
         satuan: ['Satuan']
     };
 
+    const MAPPING_AKSI = {
+        no: ['No'],
+        provinsi: ['Provinsi'],
+        program: ['Program'],
+        kegiatan: ['Kegiatan'],
+        lokasi: ['Lokasi (Kab/Kota)', 'Lokasi', 'Kab/Kota'],
+        sumber: ['Sumber Pembiayaan - Kewenangan/Urusan', 'Sumber Pembiayaan', 'Sumber Dana'],
+        output2026: ['Output 2026'],
+        anggaran2026: ['Anggaran 2026'],
+        output2027: ['Output 2027'],
+        anggaran2027: ['Anggaran 2027'],
+        output2028: ['Output 2028'],
+        anggaran2028: ['Anggaran 2028'],
+        totalAnggaran: ['Total Anggaran']
+    };
+
     const MAPPING_PROGRES = {
         no: ['No'],
         unitEselon: ['Unit Eselon I', 'Unit Eselon'],
@@ -308,10 +324,10 @@ document.addEventListener('DOMContentLoaded', () => {
         store.liveSheets = [];
         store.sheetKosong = [];
 
-        const [terdampak, aksiRows, progres, anggaranLive, dokumentasiRows, berita] =
+        const [terdampak, aksi, progres, anggaranLive, dokumentasiRows, berita] =
             await Promise.all([
                 SheetsLoader.fetchSheet(S.lokasiTerdampak, MAPPING_TERDAMPAK),
-                SheetsLoader.fetchRows(S.rencanaAksi),
+                SheetsLoader.fetchSheet(S.rencanaAksi, MAPPING_AKSI),
                 SheetsLoader.fetchSheet(S.progres, MAPPING_PROGRES),
                 SheetsLoader.fetchRows(S.anggaran),
                 SheetsLoader.fetchRows(S.dokumentasi),
@@ -324,7 +340,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         catat(terdampak, S.lokasiTerdampak.name);
-        catat(aksiRows, S.rencanaAksi.name);
+        catat(aksi, S.rencanaAksi.name);
         catat(progres, S.progres.name);
         catat(anggaranLive, S.anggaran.name);
         catat(dokumentasiRows, S.dokumentasi.name);
@@ -334,14 +350,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Dicek dengan `typeof` karena data-snapshot.js mendeklarasikan `const`,
         // yang tidak menjadi properti `window`.
         const snapTerdampak = typeof lokasiTerdampakData !== 'undefined' ? lokasiTerdampakData : [];
-        const snapAksi = typeof rencanaAksiRows !== 'undefined' ? rencanaAksiRows : [];
+        const snapAksi = typeof rencanaAksiData !== 'undefined' ? rencanaAksiData : [];
         const snapProgres = typeof progresData !== 'undefined' ? progresData : [];
         const snapAnggaran = typeof anggaranRows !== 'undefined' ? anggaranRows : null;
         const snapDokumentasi = typeof dokumentasiRows_snapshot !== 'undefined' ? dokumentasiRows_snapshot : [];
         const snapBerita = typeof beritaData !== 'undefined' ? beritaData : [];
 
         store.terdampak = normalizeTerdampak(terdampak || snapTerdampak);
-        store.aksiRows = aksiRows || snapAksi;
+        store.aksi = normalizeAksi(aksi || snapAksi);
         store.progres = normalizeProgres(progres || snapProgres);
         store.anggaran = parseAnggaran(anggaranLive || snapAnggaran);
         store.dokumentasiRows = dokumentasiRows || snapDokumentasi;
@@ -350,67 +366,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         updateDataSourceBadge();
     };
-
-    // =========================================================================
-    // Tabel generik - merender sheet apa adanya sesuai header aslinya.
-    // Dipakai menu 'Rencana Aksi', yang strukturnya ditentukan sepenuhnya
-    // oleh isi sheet-nya sendiri.
-    // =========================================================================
-
-    const buatTabelGenerik = ({ headId, bodyId, paginationId, searchId }) => {
-        const state = { rows: [], page: 1, perPage: 15, search: '' };
-
-        const render = () => {
-            const head = document.getElementById(headId);
-            const body = document.getElementById(bodyId);
-            if (!head || !body) return;
-
-            if (state.rows.length < 2) { head.innerHTML = ''; body.innerHTML = ''; return; }
-
-            const header = state.rows[0];
-            // Buang kolom yang seluruh selnya kosong agar tabel tidak melebar percuma.
-            const kolom = header.map((_, i) => i)
-                .filter(i => state.rows.some(r => cleanCell(r[i]) !== ''));
-
-            head.innerHTML = `<tr>${kolom.map(i => `<th>${dash(header[i])}</th>`).join('')}</tr>`;
-
-            const data = state.rows.slice(1).filter(r =>
-                !state.search || r.some(c => String(c || '').toLowerCase().includes(state.search)));
-
-            if (!data.length) {
-                body.innerHTML = `<tr><td colspan="${kolom.length}" class="table-empty">
-                    <strong>Tidak ada baris yang cocok dengan pencarian.</strong>
-                </td></tr>`;
-                renderPagination(paginationId, 0, 1, state.perPage, () => {});
-                return;
-            }
-
-            const start = (state.page - 1) * state.perPage;
-            body.innerHTML = data.slice(start, start + state.perPage).map(r =>
-                `<tr>${kolom.map(i => {
-                    const v = cleanCell(r[i]);
-                    return `<td class="cell-truncate" title="${esc(v)}">${dash(v)}</td>`;
-                }).join('')}</tr>`).join('');
-
-            renderPagination(paginationId, data.length, state.page, state.perPage, (p) => {
-                state.page = p;
-                render();
-            });
-        };
-
-        document.getElementById(searchId)?.addEventListener('input', (e) => {
-            state.search = e.target.value.toLowerCase();
-            state.page = 1;
-            render();
-        });
-
-        return {
-            render,
-            setRows: (rows) => { state.rows = rows || []; state.page = 1; render(); }
-        };
-    };
-
-    let tabelAksi = null;
 
     // =========================================================================
     // MENU 1 - LOKASI TERDAMPAK
@@ -611,6 +566,240 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         applyTerdampakFilters();
+    };
+
+    // =========================================================================
+    // MENU 2 - RENCANA AKSI
+    // =========================================================================
+
+    const normalizeAksi = (rows) => rows
+        .map((item, index) => {
+            const a2026 = parseRupiah(item.anggaran2026);
+            const a2027 = parseRupiah(item.anggaran2027);
+            const a2028 = parseRupiah(item.anggaran2028);
+            const totalKolom = parseRupiah(item.totalAnggaran);
+
+            return {
+                id: index,
+                no: cleanCell(item.no) || String(index + 1),
+                provinsi: cleanCell(item.provinsi),
+                program: cleanCell(item.program),
+                kegiatan: cleanCell(item.kegiatan),
+                lokasi: cleanCell(item.lokasi).replace(/\s*\n\s*/g, ' '),
+                sumber: cleanCell(item.sumber),
+                output2026: cleanCell(item.output2026),
+                output2027: cleanCell(item.output2027),
+                output2028: cleanCell(item.output2028),
+                anggaran2026: a2026,
+                anggaran2027: a2027,
+                anggaran2028: a2028,
+                // Pakai kolom Total bila terisi; bila kosong, jumlahkan per tahun.
+                totalAnggaran: totalKolom || (a2026 + a2027 + a2028)
+            };
+        })
+        .filter(item => item.provinsi && item.provinsi.toLowerCase() !== 'provinsi');
+
+    /**
+     * Kolom lokasi berisi beberapa kab/kota dipisah ";", kadang berawalan nomor
+     * urut ("1 Aceh Utara; 2 Aceh Selatan"). Nomor itu dibuang supaya nama
+     * wilayah yang sama tidak terhitung sebagai dua wilayah berbeda.
+     */
+    const pecahLokasi = (lokasi) => (lokasi || '')
+        .split(/[;\n]/)
+        .map(x => x.replace(/^\s*\d+[.)]?\s*/, '').trim())
+        .filter(x => x.length > 2);
+
+    const aksiState = {
+        filtered: [],
+        page: 1,
+        perPage: 15,
+        filters: { provinsi: '', kegiatan: '', sumber: '', search: '' },
+        charts: { tahun: null, provinsi: null }
+    };
+
+    const renderAksiSummary = () => {
+        const rows = aksiState.filtered;
+        const totalAnggaran = rows.reduce((s, r) => s + r.totalAnggaran, 0);
+        const kegiatanSet = new Set(rows.map(r => r.kegiatan).filter(Boolean));
+        const kabKotaSet = new Set();
+        rows.forEach(r => pecahLokasi(r.lokasi).forEach(k => kabKotaSet.add(k)));
+
+        setText('ra-stat-anggaran', totalAnggaran ? formatRupiah(totalAnggaran) : 'Rp 0');
+        setText('ra-stat-aksi', rows.length);
+        setText('ra-stat-kegiatan', kegiatanSet.size);
+        setText('ra-stat-kabkota', kabKotaSet.size);
+    };
+
+    const renderAksiCharts = () => {
+        const rows = aksiState.filtered;
+
+        // 1. Anggaran per tahun
+        const perTahun = [
+            rows.reduce((s, r) => s + r.anggaran2026, 0),
+            rows.reduce((s, r) => s + r.anggaran2027, 0),
+            rows.reduce((s, r) => s + r.anggaran2028, 0)
+        ];
+        const cvTahun = document.getElementById('chart-ra-tahun');
+        if (cvTahun) {
+            if (aksiState.charts.tahun) {
+                aksiState.charts.tahun.data.datasets[0].data = perTahun;
+                aksiState.charts.tahun.update();
+            } else {
+                aksiState.charts.tahun = new Chart(cvTahun.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['2026', '2027', '2028'],
+                        datasets: [{
+                            label: 'Alokasi Anggaran', data: perTahun,
+                            backgroundColor: colors.primary, borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { callbacks: { label: (ctx) => ' ' + formatRupiah(ctx.raw) } }
+                        },
+                        scales: { y: { beginAtZero: true, ticks: { callback: (v) => chartNumberFormat(v) } } }
+                    }
+                });
+            }
+        }
+
+        // 2. Proporsi per provinsi
+        const perProvinsi = {};
+        rows.forEach(r => {
+            if (!r.provinsi) return;
+            perProvinsi[r.provinsi] = (perProvinsi[r.provinsi] || 0) + r.totalAnggaran;
+        });
+        const labels = Object.keys(perProvinsi);
+        const values = Object.values(perProvinsi);
+        const warna = labels.map((_, i) => chartPalette[i % chartPalette.length]);
+
+        const cvProv = document.getElementById('chart-ra-provinsi');
+        if (cvProv) {
+            if (aksiState.charts.provinsi) {
+                aksiState.charts.provinsi.data.labels = labels;
+                aksiState.charts.provinsi.data.datasets[0].data = values;
+                aksiState.charts.provinsi.data.datasets[0].backgroundColor = warna;
+                aksiState.charts.provinsi.update();
+            } else {
+                aksiState.charts.provinsi = new Chart(cvProv.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels,
+                        datasets: [{ data: values, backgroundColor: warna, borderWidth: 2, borderColor: '#ffffff' }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '62%',
+                        plugins: {
+                            legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, padding: 12 } },
+                            tooltip: {
+                                callbacks: {
+                                    label: (ctx) => {
+                                        const tot = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                        const pct = tot > 0 ? ((ctx.raw / tot) * 100).toFixed(1) : '0.0';
+                                        return ' ' + formatRupiah(ctx.raw) + ' (' + pct + '%)';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    };
+
+    const renderAksiTable = () => {
+        const tbody = document.getElementById('ra-table-body');
+        if (!tbody) return;
+
+        const rows = aksiState.filtered;
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="13" class="table-empty">' +
+                '<strong>Tidak ada data yang ditemukan.</strong> ' +
+                'Coba ubah kombinasi filter atau kata kunci pencarian.</td></tr>';
+            renderPagination('ra-pagination', 0, 1, aksiState.perPage, () => {});
+            return;
+        }
+
+        const rp = (n) => n ? formatRupiah(n) : '-';
+        const start = (aksiState.page - 1) * aksiState.perPage;
+
+        tbody.innerHTML = rows.slice(start, start + aksiState.perPage).map(r => `
+            <tr>
+                <td>${dash(r.no)}</td>
+                <td>${dash(r.provinsi)}</td>
+                <td class="cell-truncate" title="${esc(r.program)}">${dash(r.program)}</td>
+                <td class="cell-truncate" title="${esc(r.kegiatan)}" style="font-weight:500;">${dash(r.kegiatan)}</td>
+                <td class="cell-truncate" title="${esc(r.lokasi)}">${dash(r.lokasi)}</td>
+                <td><span class="badge badge-gray">${dash(r.sumber)}</span></td>
+                <td class="cell-truncate" title="${esc(r.output2026)}">${dash(r.output2026)}</td>
+                <td class="num">${rp(r.anggaran2026)}</td>
+                <td class="cell-truncate" title="${esc(r.output2027)}">${dash(r.output2027)}</td>
+                <td class="num">${rp(r.anggaran2027)}</td>
+                <td class="cell-truncate" title="${esc(r.output2028)}">${dash(r.output2028)}</td>
+                <td class="num">${rp(r.anggaran2028)}</td>
+                <td class="num" style="font-weight:600;color:#03255C;">${rp(r.totalAnggaran)}</td>
+            </tr>`).join('');
+
+        renderPagination('ra-pagination', rows.length, aksiState.page, aksiState.perPage, (p) => {
+            aksiState.page = p;
+            renderAksiTable();
+        });
+    };
+
+    const renderAksi = () => {
+        renderAksiSummary();
+        renderAksiCharts();
+        renderAksiTable();
+    };
+
+    const applyAksiFilters = () => {
+        const f = aksiState.filters;
+        aksiState.filtered = store.aksi.filter(r => {
+            const cocokProvinsi = !f.provinsi || r.provinsi === f.provinsi;
+            const cocokKegiatan = !f.kegiatan || r.kegiatan === f.kegiatan;
+            const cocokSumber = !f.sumber || r.sumber === f.sumber;
+            const cocokCari = !f.search || [r.program, r.kegiatan, r.lokasi, r.output2026]
+                .some(v => (v || '').toLowerCase().includes(f.search));
+            return cocokProvinsi && cocokKegiatan && cocokSumber && cocokCari;
+        });
+        aksiState.page = 1;
+        renderAksi();
+    };
+
+    const setupAksi = () => {
+        const uniq = (key) => [...new Set(store.aksi.map(r => r[key]).filter(Boolean))].sort();
+        populateSelect('ra-filter-provinsi', uniq('provinsi'), 'Semua Provinsi');
+        populateSelect('ra-filter-kegiatan', uniq('kegiatan'), 'Semua Kegiatan');
+        populateSelect('ra-filter-sumber', uniq('sumber'), 'Semua Sumber');
+
+        const bind = (id, key) => document.getElementById(id)?.addEventListener('change', (e) => {
+            aksiState.filters[key] = e.target.value;
+            applyAksiFilters();
+        });
+        bind('ra-filter-provinsi', 'provinsi');
+        bind('ra-filter-kegiatan', 'kegiatan');
+        bind('ra-filter-sumber', 'sumber');
+
+        document.getElementById('ra-search')?.addEventListener('input', (e) => {
+            aksiState.filters.search = e.target.value.toLowerCase();
+            applyAksiFilters();
+        });
+        document.getElementById('ra-btn-reset')?.addEventListener('click', () => {
+            ['ra-filter-provinsi', 'ra-filter-kegiatan', 'ra-filter-sumber', 'ra-search'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            aksiState.filters = { provinsi: '', kegiatan: '', sumber: '', search: '' };
+            applyAksiFilters();
+        });
+
+        applyAksiFilters();
     };
 
     // =========================================================================
@@ -1150,16 +1339,12 @@ document.addEventListener('DOMContentLoaded', () => {
         await loadData();
 
         setupTerdampak();
+        setupAksi();
         setupProgres();
         setupBerita();
         renderAnggaran();
         renderDokumentasi();
 
-        tabelAksi = buatTabelGenerik({
-            headId: 'aksi-head', bodyId: 'aksi-body',
-            paginationId: 'aksi-pagination', searchId: 'aksi-search'
-        });
-        tabelAksi.setRows(store.aksiRows);
 
         syncMenuVisibility();
     };
@@ -1189,11 +1374,11 @@ document.addEventListener('DOMContentLoaded', () => {
         keepValue('berita-filter-media', uniq(store.berita, 'media'), 'Semua Media');
 
         applyTerdampakFilters();
+        applyAksiFilters();
         applyProgresFilters();
         renderAnggaran();
         renderDokumentasi();
         renderBerita();
-        if (tabelAksi) tabelAksi.setRows(store.aksiRows);
 
         syncMenuVisibility();
         btn.disabled = false;
