@@ -24,12 +24,14 @@ const DASHBOARD_CONFIG = {
     // https://docs.google.com/spreadsheets/d/17f55nIKhSuqzMFh6S5-gDW6UP7Ka-hA2Emr89OKpI98/edit
     SPREADSHEET_ID: '17f55nIKhSuqzMFh6S5-gDW6UP7Ka-hA2Emr89OKpI98',
 
-    // Keenam tab pada spreadsheet. `name` hanya untuk keterbacaan & pesan error;
+    // Ketujuh tab pada spreadsheet. `name` hanya untuk keterbacaan & pesan error;
     // yang dipakai untuk mengambil data adalah `gid`.
     SHEETS: {
         lokasiTerdampak:   { name: 'Lokasi Terdampak',   gid: '0' },
         progres:           { name: 'Progres',            gid: '149281903' },
+        // Dua sheet ini digabung dalam satu menu 'Anggaran'.
         anggaran:          { name: 'Anggaran',           gid: '1677136347' },
+        realisasiAnggaran: { name: 'Realisasi Anggaran', gid: '1428010126' },
         dokumentasi:       { name: 'Dokumentasi',        gid: '1541017401' },
         berita:            { name: 'Berita',             gid: '1481312824' },
         rencanaAksi:       { name: 'Rencana Aksi',       gid: '1961242337' }

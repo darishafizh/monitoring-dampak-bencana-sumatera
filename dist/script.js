@@ -145,6 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
         aksi: [],           // sheet 'Rencana Aksi'
         progres: [],        // sheet 'Progres'
         anggaran: null,     // sheet 'Anggaran'            (blok laporan)
+        realisasi: null,    // sheet 'Realisasi Anggaran'  (digabung ke menu Anggaran)
         dokumentasiRows: [], // sheet 'Dokumentasi'        (baris mentah: Before | After)
         dokumentasi: [],    // hasil normalisasi pasangan before/after
         berita: [],         // sheet 'Berita'
@@ -160,7 +161,8 @@ document.addEventListener('DOMContentLoaded', () => {
         { page: 'terdampak', ada: () => store.terdampak.length > 0 },
         { page: 'aksi',      ada: () => store.aksi.length > 0 },
         { page: 'progres',   ada: () => store.progres.length > 0 },
-        { page: 'anggaran',  ada: () => store.anggaran !== null },
+        // Menu 'Anggaran' menggabungkan sheet 'Anggaran' dan 'Realisasi Anggaran'.
+        { page: 'anggaran',  ada: () => store.anggaran !== null || store.realisasi !== null },
         { page: 'dokumentasi', ada: () => store.dokumentasi.length > 0 },
         { page: 'berita',    ada: () => store.berita.length > 0 }
     ];
@@ -324,12 +326,13 @@ document.addEventListener('DOMContentLoaded', () => {
         store.liveSheets = [];
         store.sheetKosong = [];
 
-        const [terdampak, aksi, progres, anggaranLive, dokumentasiRows, berita] =
+        const [terdampak, aksi, progres, anggaranLive, realisasiLive, dokumentasiRows, berita] =
             await Promise.all([
                 SheetsLoader.fetchSheet(S.lokasiTerdampak, MAPPING_TERDAMPAK),
                 SheetsLoader.fetchSheet(S.rencanaAksi, MAPPING_AKSI),
                 SheetsLoader.fetchSheet(S.progres, MAPPING_PROGRES),
                 SheetsLoader.fetchRows(S.anggaran),
+                SheetsLoader.fetchRows(S.realisasiAnggaran),
                 SheetsLoader.fetchRows(S.dokumentasi),
                 SheetsLoader.fetchSheet(S.berita, MAPPING_BERITA)
             ]);
@@ -343,6 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
         catat(aksi, S.rencanaAksi.name);
         catat(progres, S.progres.name);
         catat(anggaranLive, S.anggaran.name);
+        catat(realisasiLive, S.realisasiAnggaran.name);
         catat(dokumentasiRows, S.dokumentasi.name);
         catat(berita, S.berita.name);
 
@@ -353,6 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const snapAksi = typeof rencanaAksiData !== 'undefined' ? rencanaAksiData : [];
         const snapProgres = typeof progresData !== 'undefined' ? progresData : [];
         const snapAnggaran = typeof anggaranRows !== 'undefined' ? anggaranRows : null;
+        const snapRealisasi = typeof realisasiAnggaranRows !== 'undefined' ? realisasiAnggaranRows : null;
         const snapDokumentasi = typeof dokumentasiRows_snapshot !== 'undefined' ? dokumentasiRows_snapshot : [];
         const snapBerita = typeof beritaData !== 'undefined' ? beritaData : [];
 
@@ -360,6 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
         store.aksi = normalizeAksi(aksi || snapAksi);
         store.progres = normalizeProgres(progres || snapProgres);
         store.anggaran = parseAnggaran(anggaranLive || snapAnggaran);
+        store.realisasi = parseRealisasi(realisasiLive || snapRealisasi);
         store.dokumentasiRows = dokumentasiRows || snapDokumentasi;
         store.dokumentasi = normalizeDokumentasi(store.dokumentasiRows);
         store.berita = normalizeBerita(berita || snapBerita);
@@ -1148,6 +1154,113 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     };
 
+    /**
+     * Sheet 'Realisasi Anggaran' - bertingkat dua level:
+     *
+     *   No                                  |                       | Target Volume | Target Anggaran (000) | ...
+     *   Pemulihan dan Operasionalisasi Bu... |                       | 525.921,00    | 70.419.096            |   <- kelompok
+     *                                        | - Bantuan Excavator   | 12            | 17.268.000            |   <- rincian
+     *   Total                                |                       |               | 155.316.812           |   <- total
+     *
+     * Nama kelompok ada di kolom 0, nama rincian di kolom 1. Nilai anggaran
+     * ditulis dalam RIBUAN rupiah (lihat judul kolom "(000)"), jadi dikali 1000.
+     */
+    const parseRealisasi = (rows) => {
+        if (!rows || rows.length < 2) return null;
+
+        const cell = (r, i) => cleanCell(r && r[i]);
+
+        // Baris header dicari lewat isinya, karena sheet diawali baris kosong.
+        const iHeader = rows.findIndex(r => r.some(c => /target\s*volume/i.test(cleanCell(c))));
+        if (iHeader === -1) return null;
+
+        const header = rows[iHeader];
+        const kolom = (...pola) => {
+            for (const p of pola) {
+                const i = header.findIndex(c => p.test(cleanCell(c)));
+                if (i !== -1) return i;
+            }
+            return -1;
+        };
+        const cTargetVol = kolom(/target\s*volume/i);
+        const cTargetRp = kolom(/target\s*anggaran/i);
+        const cRealVol = kolom(/realisasi\s*volume/i);
+        const cRealRp = kolom(/realisasi\s*anggaran/i);
+        const cKet = kolom(/keterangan/i);
+
+        // "(000)" pada judul kolom berarti nilainya dalam ribuan rupiah.
+        const ribuan = /\(0{3}\)/.test(cell(header, cTargetRp)) ? 1000 : 1;
+        const rp = (v) => parseRupiah(v) * ribuan;
+
+        const baris = [];
+        let target = 0, realisasi = 0, adaTotalSheet = false;
+
+        rows.slice(iHeader + 1).forEach(r => {
+            const kelompok = cell(r, 0);
+            const rincian = cell(r, 1);
+            if (!kelompok && !rincian) return;
+
+            const tRp = rp(cell(r, cTargetRp));
+            const rRp = rp(cell(r, cRealRp));
+
+            if (/^total$/i.test(kelompok)) {
+                adaTotalSheet = true;
+                return; // tidak ikut didaftar; totalnya dihitung dari baris kelompok
+            }
+
+            const isKelompok = Boolean(kelompok);
+            if (isKelompok) { target += tRp; realisasi += rRp; }
+
+            baris.push({
+                level: isKelompok ? 'kelompok' : 'rincian',
+                nama: (isKelompok ? kelompok : rincian).replace(/^-\s*/, ''),
+                targetVolume: cell(r, cTargetVol),
+                realisasiVolume: cell(r, cRealVol),
+                targetAnggaran: tRp,
+                realisasiAnggaran: rRp,
+                // Persentase dihitung sendiri: kolom persen di sheet tidak konsisten
+                // (baris Total-nya berisi penjumlahan persen, bukan persentase).
+                persentase: tRp > 0 ? (rRp / tRp) * 100 : 0,
+                keterangan: cKet === -1 ? '' : cell(r, cKet)
+            });
+        });
+
+        if (!baris.length) return null;
+        return { baris, target, realisasi, adaTotalSheet };
+    };
+
+    const renderRealisasi = () => {
+        const section = document.getElementById('real-section');
+        if (!section) return;
+
+        const d = store.realisasi;
+        if (!d) { section.hidden = true; return; }
+        section.hidden = false;
+
+        const persen = d.target > 0 ? (d.realisasi / d.target) * 100 : 0;
+        setText('real-stat-target', d.target ? formatRupiah(d.target) : 'Rp 0');
+        setText('real-stat-realisasi', d.realisasi ? formatRupiah(d.realisasi) : 'Rp 0');
+        setText('real-stat-persen', persen.toFixed(2) + '%');
+
+        const tbody = document.getElementById('real-body');
+        if (!tbody) return;
+
+        const rp = (n) => n ? formatRupiah(n) : '-';
+        tbody.innerHTML = d.baris.map(b => {
+            const kelompok = b.level === 'kelompok';
+            return '<tr class="' + (kelompok ? 'baris-kelompok' : 'baris-rincian') + '">' +
+                '<td class="cell-truncate" title="' + esc(b.nama) + '">' + dash(b.nama) + '</td>' +
+                '<td class="num">' + dash(b.targetVolume) + '</td>' +
+                '<td class="num">' + rp(b.targetAnggaran) + '</td>' +
+                '<td class="num">' + dash(b.realisasiVolume) + '</td>' +
+                '<td class="num">' + rp(b.realisasiAnggaran) + '</td>' +
+                '<td class="num"><span class="badge ' + progresBadge(b.persentase) + '">' +
+                    b.persentase.toFixed(2) + '%</span></td>' +
+                '<td>' + (b.keterangan ? '<span class="badge badge-gray">' + esc(b.keterangan) + '</span>' : '-') + '</td>' +
+            '</tr>';
+        }).join('');
+    };
+
     // =========================================================================
     // MENU 5 - DOKUMENTASI
     //
@@ -1343,6 +1456,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setupProgres();
         setupBerita();
         renderAnggaran();
+        renderRealisasi();
         renderDokumentasi();
 
 
@@ -1377,6 +1491,7 @@ document.addEventListener('DOMContentLoaded', () => {
         applyAksiFilters();
         applyProgresFilters();
         renderAnggaran();
+        renderRealisasi();
         renderDokumentasi();
         renderBerita();
 

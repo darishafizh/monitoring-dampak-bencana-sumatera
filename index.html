@@ -404,6 +404,58 @@
                 <p class="chart-note" id="ang-catatan" hidden></p>
             </section>
 
+            <!-- Realisasi: sheet 'Realisasi Anggaran', digabung ke menu Anggaran -->
+            <section id="real-section" hidden>
+                <div class="summary-cards" style="margin-bottom: var(--space-5);">
+                    <div class="card stat-card primary-stat">
+                        <div class="stat-icon">&#127919;</div>
+                        <div class="stat-details">
+                            <p class="stat-label">Target Anggaran</p>
+                            <h3 class="stat-value" id="real-stat-target">Rp 0</h3>
+                        </div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-icon">&#9989;</div>
+                        <div class="stat-details">
+                            <p class="stat-label">Realisasi Anggaran</p>
+                            <h3 class="stat-value" id="real-stat-realisasi">Rp 0</h3>
+                        </div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-icon">&#128202;</div>
+                        <div class="stat-details">
+                            <p class="stat-label">Persentase Realisasi</p>
+                            <h3 class="stat-value" id="real-stat-persen">0%</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card table-section">
+                    <div class="table-header">
+                        <div class="table-title">
+                            <h3>Realisasi Anggaran</h3>
+                            <p>Sumber: sheet <em>Realisasi Anggaran</em> - nilai anggaran sheet ditulis dalam ribuan rupiah dan sudah dikonversi</p>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Kegiatan</th>
+                                    <th class="num">Target Volume</th>
+                                    <th class="num">Target Anggaran</th>
+                                    <th class="num">Realisasi Volume</th>
+                                    <th class="num">Realisasi Anggaran</th>
+                                    <th class="num">Persentase</th>
+                                    <th>Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="real-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
             <section class="card table-section" id="ang-alokasi-wrap" hidden>
                 <div class="table-header">
                     <div class="table-title">

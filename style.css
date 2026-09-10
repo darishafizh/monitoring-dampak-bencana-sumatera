@@ -839,3 +839,14 @@ tbody tr:hover {
 .dok-sisi.is-gagal a {
     display: none;
 }
+
+/* Tabel realisasi anggaran: baris kelompok vs rincian */
+.baris-kelompok td {
+    font-weight: 600;
+    background-color: rgba(3, 37, 92, 0.04);
+}
+
+.baris-rincian td:first-child {
+    padding-left: var(--space-6);
+    color: var(--text-muted);
+}
