@@ -126,8 +126,7 @@ a:hover {
 }
 
 .topbar-inner {
-    max-width: 1440px;
-    margin: 0 auto;
+    width: 100%;
     padding: 0 var(--space-6);
     height: 64px;
     display: flex;
@@ -231,8 +230,7 @@ a:hover {
    ========================================================================== */
 
 .container {
-    max-width: 1440px;
-    margin: 0 auto;
+    width: 100%;
     padding: var(--space-6);
 }
 
@@ -863,6 +861,9 @@ th.num, td.num {
 .doc-side img {
     width: 100%;
     aspect-ratio: 4 / 3;
+    /* Layar lebar tidak boleh membuat foto membesar lagi; tingginya dibatasi
+       dan object-fit yang mengurus pemotongannya. */
+    max-height: 230px;
     object-fit: cover;
     border-radius: var(--radius-md);
     border: 1px solid var(--border);
@@ -873,6 +874,7 @@ th.num, td.num {
 .doc-fallback {
     display: none;
     aspect-ratio: 4 / 3;
+    max-height: 230px;
     place-items: center;
     text-align: center;
     padding: var(--space-4);
@@ -923,6 +925,7 @@ th.num, td.num {
 .news-thumb {
     display: block;
     aspect-ratio: 16 / 10;
+    max-height: 220px;
     background-color: var(--surface-alt);
     overflow: hidden;
 }
@@ -996,8 +999,7 @@ th.num, td.num {
    ========================================================================== */
 
 .footer {
-    max-width: 1440px;
-    margin: 0 auto;
+    width: 100%;
     padding: var(--space-5) var(--space-6) var(--space-8);
     display: flex;
     justify-content: space-between;

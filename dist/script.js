@@ -217,6 +217,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const menuAktif = () => MENUS.filter(m => m.ada()).map(m => m.page);
 
+    /** Ukur ulang seluruh grafik di dalam sebuah halaman setelah ia ditampilkan. */
+    const resizeGrafik = (pageEl) => {
+        if (!pageEl || !window.Chart) return;
+        requestAnimationFrame(() => {
+            pageEl.querySelectorAll('canvas').forEach(cv => {
+                const ch = Chart.getChart(cv);
+                if (ch) ch.resize();
+            });
+        });
+    };
+
     const showPage = (name) => {
         const tersedia = menuAktif();
         if (!tersedia.length) return;
@@ -242,8 +253,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (history.replaceState) history.replaceState(null, '', `#${name}`);
 
-        // Chart.js perlu di-resize setelah canvas keluar dari display:none
-        window.dispatchEvent(new Event('resize'));
+        // Grafik dibuat saat halamannya masih display:none, sehingga canvas-nya
+        // berukuran 0x0. Event resize global tidak selalu memicu Chart.js
+        // mengukur ulang, jadi tiap grafik di halaman aktif di-resize eksplisit
+        // setelah layout selesai dihitung.
+        resizeGrafik(document.getElementById(`page-${name}`));
     };
 
     /** Sembunyikan tombol & halaman milik sheet yang kosong. */
