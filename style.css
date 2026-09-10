@@ -783,42 +783,45 @@ th.num, td.num {
    Dokumentasi (before / after)
    ========================================================================== */
 
+/* Dua pasang per baris = 4 kolom gambar, sehingga urutan bacanya zigzag
+   (kiri ke kanan, lalu turun) dan tiap fotonya jauh lebih ringkas. */
 .doc-list {
     list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-5);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
     padding: var(--space-5);
 }
 
 .doc-item {
     display: flex;
-    gap: var(--space-4);
+    gap: var(--space-3);
     align-items: flex-start;
-    padding: var(--space-4);
+    padding: var(--space-3);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     background-color: var(--surface-alt);
+    min-width: 0;
 }
 
 .doc-no {
-    width: 26px;
-    height: 26px;
+    width: 22px;
+    height: 22px;
     display: grid;
     place-items: center;
     flex-shrink: 0;
     border-radius: 50%;
     background-color: var(--primary);
     color: #fff;
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     font-weight: 700;
 }
 
 .doc-pair {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: var(--space-4);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
     min-width: 0;
 }
 
@@ -832,14 +835,19 @@ th.num, td.num {
 .doc-tag {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     align-self: flex-start;
-    padding: 3px 9px;
+    padding: 2px 7px;
     border-radius: 9999px;
-    font-size: 0.625rem;
+    font-size: 0.5625rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
+}
+
+.doc-tag .icon {
+    width: 11px;
+    height: 11px;
 }
 
 .doc-tag.is-before {
@@ -1008,6 +1016,11 @@ th.num, td.num {
     .grid-2 {
         grid-template-columns: minmax(0, 1fr);
     }
+
+    /* Di bawah ini 4 kolom jadi terlalu sempit: turun ke satu pasang per baris */
+    .doc-list {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 @media (max-width: 900px) {
@@ -1051,6 +1064,10 @@ th.num, td.num {
 
     .doc-item {
         flex-direction: column;
+    }
+
+    .doc-pair {
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .page-info {
