@@ -3,53 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>KKP - Rehabilitasi Pascabencana Sumatera</title>
+    <title>Dashboard Rehabilitasi Pascabencana Sumatera - KKP</title>
     <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
     <link rel="apple-touch-icon" href="logo-kkp.png">
 
-    <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chart.js untuk grafik, Lucide untuk ikon garis (bukan emoji) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.544.0/dist/umd/lucide.min.js"></script>
 
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Top Navigation Bar -->
-    <header class="top-navbar">
-        <div class="nav-container">
-            <div class="nav-brand">
-                <div class="brand-logo"><img src="logo-kkp.png" alt="Logo KKP"></div>
-                <div class="brand-title">
-                    <h1>Dashboard Analisis</h1>
-                    <p>Rencana Induk Rehabilitasi dan Rekonstruksi Pascabencana Sumatera (2026-2028)</p>
-                </div>
-            </div>
+
+    <!-- ================= TOPBAR ================= -->
+    <header class="topbar">
+        <div class="topbar-inner">
+            <a class="brand" href="#terdampak">
+                <img src="logo-kkp.png" alt="Logo Kementerian Kelautan dan Perikanan">
+                <span>
+                    <span class="brand-name">Rehabilitasi Sumatera</span>
+                    <span class="brand-sub">Kementerian Kelautan dan Perikanan</span>
+                </span>
+            </a>
 
             <!--
-                Menu navigasi (kanan). Satu menu = satu sheet.
-                Tombol yang sheet-nya belum berisi data otomatis disembunyikan oleh script.js.
+                Navigasi (kanan). Satu menu = satu sheet; tombol yang sheet-nya
+                belum berisi data otomatis disembunyikan oleh script.js.
             -->
-            <nav class="nav-menu" aria-label="Menu utama">
-                <button class="nav-link" data-page="terdampak">Lokasi Terdampak</button>
-                <button class="nav-link" data-page="aksi">Rencana Aksi</button>
-                <button class="nav-link" data-page="progres">Progres</button>
-                <button class="nav-link" data-page="anggaran">Anggaran</button>
-                <button class="nav-link" data-page="dokumentasi">Dokumentasi</button>
-                <button class="nav-link" data-page="berita">Berita</button>
+            <nav class="mainnav" aria-label="Menu utama">
+                <button class="nav-link" data-page="terdampak">
+                    <i data-lucide="map-pin" class="icon"></i>Lokasi Terdampak
+                </button>
+                <button class="nav-link" data-page="aksi">
+                    <i data-lucide="clipboard-list" class="icon"></i>Rencana Aksi
+                </button>
+                <button class="nav-link" data-page="progres">
+                    <i data-lucide="activity" class="icon"></i>Progres
+                </button>
+                <button class="nav-link" data-page="anggaran">
+                    <i data-lucide="wallet" class="icon"></i>Anggaran
+                </button>
+                <button class="nav-link" data-page="dokumentasi">
+                    <i data-lucide="images" class="icon"></i>Dokumentasi
+                </button>
+                <button class="nav-link" data-page="berita">
+                    <i data-lucide="newspaper" class="icon"></i>Berita
+                </button>
             </nav>
         </div>
     </header>
 
-    <div class="dashboard-container">
-        <!-- Indikator sumber data (live spreadsheet vs snapshot lokal) -->
-        <div class="data-source" id="data-source">
-            <span class="ds-dot"></span>
-            <span class="ds-text" id="data-source-text">Memuat data...</span>
-            <button class="ds-refresh" id="btn-refresh" title="Muat ulang data dari spreadsheet">&#8635; Muat ulang</button>
+    <div class="container">
+
+        <!-- Judul halaman aktif + status sumber data -->
+        <div class="page-head">
+            <div>
+                <h1 id="page-title">Dashboard</h1>
+                <p id="page-desc">Memuat data...</p>
+            </div>
+            <div class="page-head-actions">
+                <span class="source-pill" id="data-source">
+                    <span class="source-dot"></span>
+                    <span class="source-text" id="data-source-text">Memuat data...</span>
+                </span>
+                <button class="btn btn-primary" id="btn-refresh" title="Ambil ulang data terbaru dari spreadsheet">
+                    <i data-lucide="refresh-cw" class="icon"></i>Muat ulang
+                </button>
+            </div>
         </div>
 
         <!-- Ditampilkan bila seluruh sheet kosong / tidak terbaca -->
@@ -61,89 +85,85 @@
         <!-- ============================================================= -->
         <!-- MENU 1: LOKASI TERDAMPAK   <- sheet 'Lokasi Terdampak'        -->
         <!-- ============================================================= -->
-        <main class="main-content page" id="page-terdampak">
+        <main class="page" id="page-terdampak">
 
-            <section class="filter-bar card">
-                <div class="filter-controls">
-                    <div class="filter-group">
-                        <label for="td-filter-provinsi">Provinsi</label>
-                        <select id="td-filter-provinsi">
-                            <option value="">Semua Provinsi</option>
-                        </select>
-                    </div>
-                    <div class="filter-actions">
-                        <button id="td-btn-reset" class="btn-secondary">Reset Filter</button>
-                    </div>
+            <section class="card toolbar">
+                <div class="field">
+                    <label for="td-filter-provinsi">Provinsi</label>
+                    <select id="td-filter-provinsi"><option value="">Semua Provinsi</option></select>
                 </div>
+                <div class="search-field">
+                    <i data-lucide="search" class="icon"></i>
+                    <input type="text" id="td-search" placeholder="Cari provinsi, kab/kota, jenis, atau kategori...">
+                </div>
+                <button id="td-btn-reset" class="btn btn-ghost">
+                    <i data-lucide="rotate-ccw" class="icon"></i>Reset
+                </button>
             </section>
 
-            <section class="summary-cards">
-                <div class="card stat-card primary-stat">
-                    <div class="stat-icon">&#128101;</div>
-                    <div class="stat-details">
+            <section class="stats">
+                <div class="stat">
+                    <div class="stat-icon"><i data-lucide="users" class="icon"></i></div>
+                    <div class="stat-body">
                         <p class="stat-label">Pelaku Usaha Terdampak</p>
-                        <h3 class="stat-value" id="td-stat-orang">0</h3>
+                        <p class="stat-value" id="td-stat-orang">0</p>
                     </div>
                 </div>
-                <div class="card stat-card">
-                    <div class="stat-icon">&#127981;</div>
-                    <div class="stat-details">
+                <div class="stat">
+                    <div class="stat-icon is-warning"><i data-lucide="package" class="icon"></i></div>
+                    <div class="stat-body">
                         <p class="stat-label">Sarana / Unit Terdampak</p>
-                        <h3 class="stat-value" id="td-stat-unit">0</h3>
+                        <p class="stat-value" id="td-stat-unit">0</p>
                     </div>
                 </div>
-                <div class="card stat-card">
-                    <div class="stat-icon">&#127754;</div>
-                    <div class="stat-details">
-                        <p class="stat-label">Luas Lahan Terdampak</p>
-                        <h3 class="stat-value" id="td-stat-ha">0</h3>
+                <div class="stat">
+                    <div class="stat-icon is-danger"><i data-lucide="waves" class="icon"></i></div>
+                    <div class="stat-body">
+                        <p class="stat-label">Luas Lahan Terdampak (Ha)</p>
+                        <p class="stat-value" id="td-stat-ha">0</p>
                     </div>
                 </div>
-                <div class="card stat-card">
-                    <div class="stat-icon">&#128205;</div>
-                    <div class="stat-details">
+                <div class="stat">
+                    <div class="stat-icon is-neutral"><i data-lucide="map-pin" class="icon"></i></div>
+                    <div class="stat-body">
                         <p class="stat-label">Kab/Kota Terdampak</p>
-                        <h3 class="stat-value" id="td-stat-kabkota">0</h3>
+                        <p class="stat-value" id="td-stat-kabkota">0</p>
                     </div>
                 </div>
             </section>
 
-            <section class="analytics-grid">
-                <div class="card chart-container">
-                    <div class="chart-header">
-                        <h3>Jenis Terdampak</h3>
-                        <p class="chart-subtitle">Komposisi dampak berdasarkan jenis</p>
+            <section class="grid-2">
+                <div class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Jenis Terdampak</h3>
+                            <p>Komposisi dampak berdasarkan jenis</p>
+                        </div>
                     </div>
-                    <div class="canvas-wrapper">
-                        <canvas id="chart-jenis"></canvas>
-                    </div>
-                    <p class="chart-note">Nilai digabung lintas satuan (orang, unit, ha, kab/kota). Arahkan kursor ke grafik untuk rincian per satuan.</p>
+                    <div class="chart-box"><canvas id="chart-jenis"></canvas></div>
+                    <p class="panel-note">Nilai digabung lintas satuan (orang, unit, ha, kab/kota). Arahkan kursor ke grafik untuk rincian per satuan.</p>
                 </div>
-                <div class="card chart-container">
-                    <div class="chart-header">
-                        <h3>Kategori Terdampak</h3>
-                        <p class="chart-subtitle">Rincian dampak per kategori objek terdampak</p>
+                <div class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Kategori Terdampak</h3>
+                            <p>Rincian dampak per kategori objek terdampak</p>
+                        </div>
                     </div>
-                    <div class="canvas-wrapper">
-                        <canvas id="chart-kategori"></canvas>
-                    </div>
-                    <p class="chart-note">Nilai digabung lintas satuan (orang, unit, ha, kab/kota). Arahkan kursor ke grafik untuk rincian per satuan.</p>
+                    <div class="chart-box"><canvas id="chart-kategori"></canvas></div>
+                    <p class="panel-note">Nilai digabung lintas satuan (orang, unit, ha, kab/kota). Arahkan kursor ke grafik untuk rincian per satuan.</p>
                 </div>
             </section>
 
-            <section class="table-section card">
-                <div class="table-header">
-                    <div class="table-title">
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
                         <h3>Rincian Data Lokasi Terdampak</h3>
-                        <p>Sumber: sheet <em>Lokasi Terdampak</em></p>
-                    </div>
-                    <div class="search-box">
-                        <input type="text" id="td-search" placeholder="Cari provinsi, kab/kota, jenis, atau kategori...">
+                        <p>Sumber: sheet <strong>Lokasi Terdampak</strong></p>
                     </div>
                 </div>
-
-                <div class="table-responsive">
-                    <table id="td-table">
+                <div class="table-wrap">
+                    <table>
                         <thead>
                             <tr>
                                 <th>No</th>
@@ -165,98 +185,91 @@
         <!-- ============================================================= -->
         <!-- MENU 2: RENCANA AKSI   <- sheet 'Rencana Aksi'                -->
         <!-- ============================================================= -->
-        <main class="main-content page" id="page-aksi">
+        <main class="page" id="page-aksi">
 
-            <section class="filter-bar card">
-                <div class="filter-controls">
-                    <div class="filter-group">
-                        <label for="ra-filter-provinsi">Provinsi</label>
-                        <select id="ra-filter-provinsi">
-                            <option value="">Semua Provinsi</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="ra-filter-kegiatan">Kegiatan</label>
-                        <select id="ra-filter-kegiatan">
-                            <option value="">Semua Kegiatan</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="ra-filter-sumber">Sumber Pembiayaan</label>
-                        <select id="ra-filter-sumber">
-                            <option value="">Semua Sumber</option>
-                        </select>
-                    </div>
-                    <div class="filter-actions">
-                        <button id="ra-btn-reset" class="btn-secondary">Reset Filter</button>
-                    </div>
+            <section class="card toolbar">
+                <div class="field">
+                    <label for="ra-filter-provinsi">Provinsi</label>
+                    <select id="ra-filter-provinsi"><option value="">Semua Provinsi</option></select>
                 </div>
+                <div class="field">
+                    <label for="ra-filter-kegiatan">Kegiatan</label>
+                    <select id="ra-filter-kegiatan"><option value="">Semua Kegiatan</option></select>
+                </div>
+                <div class="field">
+                    <label for="ra-filter-sumber">Sumber Pembiayaan</label>
+                    <select id="ra-filter-sumber"><option value="">Semua Sumber</option></select>
+                </div>
+                <div class="search-field">
+                    <i data-lucide="search" class="icon"></i>
+                    <input type="text" id="ra-search" placeholder="Cari program, kegiatan, atau lokasi...">
+                </div>
+                <button id="ra-btn-reset" class="btn btn-ghost">
+                    <i data-lucide="rotate-ccw" class="icon"></i>Reset
+                </button>
             </section>
 
-            <section class="summary-cards">
-                <div class="card stat-card primary-stat">
-                    <div class="stat-icon">&#128176;</div>
-                    <div class="stat-details">
+            <section class="stats">
+                <div class="stat">
+                    <div class="stat-icon"><i data-lucide="wallet" class="icon"></i></div>
+                    <div class="stat-body">
                         <p class="stat-label">Total Anggaran</p>
-                        <h3 class="stat-value" id="ra-stat-anggaran">Rp 0</h3>
+                        <p class="stat-value" id="ra-stat-anggaran">Rp 0</p>
                     </div>
                 </div>
-                <div class="card stat-card">
-                    <div class="stat-icon">&#128203;</div>
-                    <div class="stat-details">
+                <div class="stat">
+                    <div class="stat-icon is-neutral"><i data-lucide="clipboard-list" class="icon"></i></div>
+                    <div class="stat-body">
                         <p class="stat-label">Jumlah Rencana Aksi</p>
-                        <h3 class="stat-value" id="ra-stat-aksi">0</h3>
+                        <p class="stat-value" id="ra-stat-aksi">0</p>
                     </div>
                 </div>
-                <div class="card stat-card">
-                    <div class="stat-icon">&#127919;</div>
-                    <div class="stat-details">
+                <div class="stat">
+                    <div class="stat-icon is-neutral"><i data-lucide="layers" class="icon"></i></div>
+                    <div class="stat-body">
                         <p class="stat-label">Jenis Kegiatan</p>
-                        <h3 class="stat-value" id="ra-stat-kegiatan">0</h3>
+                        <p class="stat-value" id="ra-stat-kegiatan">0</p>
                     </div>
                 </div>
-                <div class="card stat-card">
-                    <div class="stat-icon">&#128205;</div>
-                    <div class="stat-details">
+                <div class="stat">
+                    <div class="stat-icon is-neutral"><i data-lucide="map-pin" class="icon"></i></div>
+                    <div class="stat-body">
                         <p class="stat-label">Kab/Kota Terjangkau</p>
-                        <h3 class="stat-value" id="ra-stat-kabkota">0</h3>
+                        <p class="stat-value" id="ra-stat-kabkota">0</p>
                     </div>
                 </div>
             </section>
 
-            <section class="analytics-grid">
-                <div class="card chart-container">
-                    <div class="chart-header">
-                        <h3>Alokasi Anggaran per Tahun</h3>
-                        <p class="chart-subtitle">Phasing kebutuhan anggaran 2026 - 2028</p>
+            <section class="grid-2">
+                <div class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Alokasi Anggaran per Tahun</h3>
+                            <p>Phasing kebutuhan anggaran 2026 - 2028</p>
+                        </div>
                     </div>
-                    <div class="canvas-wrapper">
-                        <canvas id="chart-ra-tahun"></canvas>
-                    </div>
+                    <div class="chart-box"><canvas id="chart-ra-tahun"></canvas></div>
                 </div>
-                <div class="card chart-container">
-                    <div class="chart-header">
-                        <h3>Proporsi Anggaran per Provinsi</h3>
-                        <p class="chart-subtitle">Sebaran total anggaran antar provinsi terdampak</p>
+                <div class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Proporsi Anggaran per Provinsi</h3>
+                            <p>Sebaran total anggaran antar provinsi terdampak</p>
+                        </div>
                     </div>
-                    <div class="canvas-wrapper">
-                        <canvas id="chart-ra-provinsi"></canvas>
-                    </div>
+                    <div class="chart-box"><canvas id="chart-ra-provinsi"></canvas></div>
                 </div>
             </section>
 
-            <section class="table-section card">
-                <div class="table-header">
-                    <div class="table-title">
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
                         <h3>Rincian Rencana Aksi</h3>
-                        <p>Sumber: sheet <em>Rencana Aksi</em></p>
-                    </div>
-                    <div class="search-box">
-                        <input type="text" id="ra-search" placeholder="Cari program, kegiatan, atau lokasi...">
+                        <p>Sumber: sheet <strong>Rencana Aksi</strong></p>
                     </div>
                 </div>
-                <div class="table-responsive">
-                    <table id="ra-table">
+                <div class="table-wrap">
+                    <table>
                         <thead>
                             <tr>
                                 <th>No</th>
@@ -284,66 +297,62 @@
         <!-- ============================================================= -->
         <!-- MENU 3: PROGRES   <- sheet 'Progres'                          -->
         <!-- ============================================================= -->
-        <main class="main-content page" id="page-progres">
+        <main class="page" id="page-progres">
 
-            <section class="filter-bar card">
-                <div class="filter-controls">
-                    <div class="filter-group">
-                        <label for="pg-filter-kabkota">Kab/Kota</label>
-                        <select id="pg-filter-kabkota">
-                            <option value="">Semua Kab/Kota</option>
-                        </select>
-                    </div>
-                    <div class="filter-actions">
-                        <button id="pg-btn-reset" class="btn-secondary">Reset Filter</button>
-                    </div>
+            <section class="card toolbar">
+                <div class="field">
+                    <label for="pg-filter-kabkota">Kab/Kota</label>
+                    <select id="pg-filter-kabkota"><option value="">Semua Kab/Kota</option></select>
                 </div>
+                <div class="search-field">
+                    <i data-lucide="search" class="icon"></i>
+                    <input type="text" id="pg-search" placeholder="Cari kegiatan, kab/kota, atau desa...">
+                </div>
+                <button id="pg-btn-reset" class="btn btn-ghost">
+                    <i data-lucide="rotate-ccw" class="icon"></i>Reset
+                </button>
             </section>
 
-            <section class="summary-cards">
-                <div class="card stat-card primary-stat">
-                    <div class="stat-icon">&#127919;</div>
-                    <div class="stat-details">
+            <section class="stats">
+                <div class="stat">
+                    <div class="stat-icon"><i data-lucide="target" class="icon"></i></div>
+                    <div class="stat-body">
                         <p class="stat-label">Target Anggaran</p>
-                        <h3 class="stat-value" id="pg-stat-target">Rp 0</h3>
+                        <p class="stat-value" id="pg-stat-target">Rp 0</p>
                     </div>
                 </div>
-                <div class="card stat-card">
-                    <div class="stat-icon">&#9989;</div>
-                    <div class="stat-details">
+                <div class="stat">
+                    <div class="stat-icon is-success"><i data-lucide="circle-check-big" class="icon"></i></div>
+                    <div class="stat-body">
                         <p class="stat-label">Realisasi Anggaran</p>
-                        <h3 class="stat-value" id="pg-stat-realisasi">Rp 0</h3>
+                        <p class="stat-value" id="pg-stat-realisasi">Rp 0</p>
                     </div>
                 </div>
-                <div class="card stat-card">
-                    <div class="stat-icon">&#128202;</div>
-                    <div class="stat-details">
+                <div class="stat">
+                    <div class="stat-icon is-warning"><i data-lucide="percent" class="icon"></i></div>
+                    <div class="stat-body">
                         <p class="stat-label">Persentase Realisasi</p>
-                        <h3 class="stat-value" id="pg-stat-persen">0%</h3>
+                        <p class="stat-value" id="pg-stat-persen">0%</p>
                     </div>
                 </div>
-                <div class="card stat-card">
-                    <div class="stat-icon">&#129534;</div>
-                    <div class="stat-details">
+                <div class="stat">
+                    <div class="stat-icon is-neutral"><i data-lucide="list-checks" class="icon"></i></div>
+                    <div class="stat-body">
                         <p class="stat-label">Jumlah Kegiatan</p>
-                        <h3 class="stat-value" id="pg-stat-kegiatan">0</h3>
+                        <p class="stat-value" id="pg-stat-kegiatan">0</p>
                     </div>
                 </div>
             </section>
 
-            <section class="table-section card">
-                <div class="table-header">
-                    <div class="table-title">
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
                         <h3>Progres Pelaksanaan</h3>
-                        <p>Sumber: sheet <em>Progres</em></p>
-                    </div>
-                    <div class="search-box">
-                        <input type="text" id="pg-search" placeholder="Cari kegiatan, kab/kota, atau desa...">
+                        <p>Sumber: sheet <strong>Progres</strong></p>
                     </div>
                 </div>
-
-                <div class="table-responsive">
-                    <table id="pg-table">
+                <div class="table-wrap">
+                    <table>
                         <thead>
                             <tr>
                                 <th>No</th>
@@ -352,15 +361,14 @@
                                 <th>Kegiatan</th>
                                 <th>Desa</th>
                                 <th class="num">Target Volume</th>
-                                <th>Target Satuan</th>
+                                <th>Satuan</th>
                                 <th class="num">Target Anggaran</th>
                                 <th class="num">Realisasi Volume</th>
-                                <th>Realisasi Satuan</th>
                                 <th class="num">Realisasi Anggaran</th>
-                                <th class="num">Persentase Realisasi</th>
+                                <th>Serapan</th>
                                 <th>Target Penyelesaian</th>
-                                <th>Jumlah Penerima (Dinas/Kelompok/Orang)</th>
-                                <th>Keterangan (Sumber Anggaran)</th>
+                                <th>Penerima</th>
+                                <th>Sumber Anggaran</th>
                                 <th>Status Bantuan</th>
                             </tr>
                         </thead>
@@ -372,110 +380,123 @@
         </main>
 
         <!-- ============================================================= -->
-        <!-- MENU 4: ANGGARAN   <- sheet 'Anggaran'                        -->
+        <!-- MENU 4: ANGGARAN   <- sheet 'Anggaran' + 'Realisasi Anggaran' -->
         <!-- ============================================================= -->
-        <main class="main-content page" id="page-anggaran">
+        <main class="page" id="page-anggaran">
 
-            <section class="summary-cards">
-                <div class="card stat-card primary-stat">
-                    <div class="stat-icon">&#128188;</div>
-                    <div class="stat-details">
+            <!-- Bagian 1: pagu (sheet 'Anggaran') -->
+            <section class="stats">
+                <div class="stat">
+                    <div class="stat-icon"><i data-lucide="file-text" class="icon"></i></div>
+                    <div class="stat-body">
                         <p class="stat-label" id="ang-judul-usulan">Usulan Anggaran</p>
-                        <h3 class="stat-value" id="ang-total-usulan">Rp 0</h3>
+                        <p class="stat-value" id="ang-total-usulan">Rp 0</p>
                     </div>
                 </div>
-                <div class="card stat-card">
-                    <div class="stat-icon">&#128184;</div>
-                    <div class="stat-details">
+                <div class="stat">
+                    <div class="stat-icon is-neutral"><i data-lucide="banknote" class="icon"></i></div>
+                    <div class="stat-body">
                         <p class="stat-label" id="ang-judul-abt">ABT</p>
-                        <h3 class="stat-value" id="ang-total-abt">Rp 0</h3>
+                        <p class="stat-value" id="ang-total-abt">Rp 0</p>
                     </div>
                 </div>
             </section>
 
-            <section class="card chart-container" id="ang-chart-wrap">
-                <div class="chart-header">
-                    <h3>Usulan Anggaran vs ABT per Unit Eselon I</h3>
-                    <p class="chart-subtitle">Perbandingan usulan kebutuhan dengan anggaran belanja tambahan</p>
-                </div>
-                <div class="canvas-wrapper">
-                    <canvas id="chart-anggaran"></canvas>
-                </div>
-                <p class="chart-note" id="ang-catatan" hidden></p>
-            </section>
-
-            <!-- Realisasi: sheet 'Realisasi Anggaran', digabung ke menu Anggaran -->
-            <section id="real-section" hidden>
-
-                <div class="card filter-bar" style="margin-bottom: var(--space-5);">
-                    <div class="filter-controls">
-                        <div class="filter-group">
-                            <label for="real-filter-sumber">Sumber Dana</label>
-                            <select id="real-filter-sumber"></select>
-                        </div>
+            <section class="panel" id="ang-chart-wrap">
+                <div class="panel-head">
+                    <div>
+                        <h3>Usulan Anggaran vs ABT per Unit Eselon I</h3>
+                        <p>Perbandingan usulan kebutuhan dengan anggaran belanja tambahan</p>
                     </div>
                 </div>
+                <div class="chart-box"><canvas id="chart-anggaran"></canvas></div>
+                <p class="panel-note" id="ang-catatan" hidden></p>
+            </section>
 
-                <div class="summary-cards" style="margin-bottom: var(--space-5);">
-                    <div class="card stat-card primary-stat">
-                        <div class="stat-icon">&#127919;</div>
-                        <div class="stat-details">
+            <section class="panel" id="ang-alokasi-wrap" hidden>
+                <div class="panel-head">
+                    <div>
+                        <h3 id="ang-alokasi-judul">Alokasi Anggaran</h3>
+                        <p>Rincian pusat, daerah, dan per provinsi &middot; sumber: sheet <strong>Anggaran</strong></p>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead id="ang-alokasi-head"></thead>
+                        <tbody id="ang-alokasi-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Bagian 2: serapan (sheet 'Realisasi Anggaran') -->
+            <section id="real-section" hidden style="display:contents;">
+                <section class="card toolbar">
+                    <div class="field">
+                        <label for="real-filter-sumber">Sumber Dana</label>
+                        <select id="real-filter-sumber"></select>
+                    </div>
+                </section>
+
+                <section class="stats">
+                    <div class="stat">
+                        <div class="stat-icon"><i data-lucide="target" class="icon"></i></div>
+                        <div class="stat-body">
                             <p class="stat-label">Target Anggaran</p>
-                            <h3 class="stat-value" id="real-stat-target">Rp 0</h3>
+                            <p class="stat-value" id="real-stat-target">Rp 0</p>
                         </div>
                     </div>
-                    <div class="card stat-card">
-                        <div class="stat-icon">&#9989;</div>
-                        <div class="stat-details">
+                    <div class="stat">
+                        <div class="stat-icon is-success"><i data-lucide="circle-check-big" class="icon"></i></div>
+                        <div class="stat-body">
                             <p class="stat-label">Realisasi Anggaran</p>
-                            <h3 class="stat-value" id="real-stat-realisasi">Rp 0</h3>
+                            <p class="stat-value" id="real-stat-realisasi">Rp 0</p>
                         </div>
                     </div>
-                    <div class="card stat-card">
-                        <div class="stat-icon">&#128202;</div>
-                        <div class="stat-details">
+                    <div class="stat">
+                        <div class="stat-icon is-warning"><i data-lucide="percent" class="icon"></i></div>
+                        <div class="stat-body">
                             <p class="stat-label">Serapan</p>
-                            <h3 class="stat-value" id="real-stat-persen">0%</h3>
+                            <p class="stat-value" id="real-stat-persen">0%</p>
                         </div>
                     </div>
-                    <div class="card stat-card">
-                        <div class="stat-icon">&#8987;</div>
-                        <div class="stat-details">
+                    <div class="stat">
+                        <div class="stat-icon is-danger"><i data-lucide="hourglass" class="icon"></i></div>
+                        <div class="stat-body">
                             <p class="stat-label">Belum Terserap</p>
-                            <h3 class="stat-value" id="real-stat-sisa">Rp 0</h3>
+                            <p class="stat-value" id="real-stat-sisa">Rp 0</p>
                         </div>
                     </div>
-                </div>
+                </section>
 
-                <div class="analytics-grid" style="margin-bottom: var(--space-5);">
-                    <div class="card chart-container">
-                        <div class="chart-header">
-                            <h3>Target vs Realisasi per Kelompok Kegiatan</h3>
-                            <p class="chart-subtitle">Mengikuti pilihan sumber dana di atas</p>
+                <section class="grid-2">
+                    <div class="panel">
+                        <div class="panel-head">
+                            <div>
+                                <h3>Target vs Realisasi per Kelompok Kegiatan</h3>
+                                <p>Mengikuti pilihan sumber dana di atas</p>
+                            </div>
                         </div>
-                        <div class="canvas-wrapper">
-                            <canvas id="chart-real-kelompok"></canvas>
-                        </div>
+                        <div class="chart-box"><canvas id="chart-real-kelompok"></canvas></div>
                     </div>
-                    <div class="card chart-container">
-                        <div class="chart-header">
-                            <h3>Perbandingan Sumber Dana</h3>
-                            <p class="chart-subtitle">Serapan ABT dibanding Reguler</p>
+                    <div class="panel">
+                        <div class="panel-head">
+                            <div>
+                                <h3>Perbandingan Sumber Dana</h3>
+                                <p>Serapan ABT dibanding Reguler</p>
+                            </div>
                         </div>
-                        <div class="canvas-wrapper">
-                            <canvas id="chart-real-sumber"></canvas>
-                        </div>
+                        <div class="chart-box"><canvas id="chart-real-sumber"></canvas></div>
                     </div>
-                </div>
+                </section>
 
-                <div class="card table-section">
-                    <div class="table-header">
-                        <div class="table-title">
+                <section class="panel">
+                    <div class="panel-head">
+                        <div>
                             <h3>Rincian Realisasi Anggaran</h3>
-                            <p>Sumber: sheet <em>Realisasi Anggaran</em> - nilai anggaran pada sheet ditulis dalam ribuan rupiah dan sudah dikonversi</p>
+                            <p>Sumber: sheet <strong>Realisasi Anggaran</strong> &middot; nilai pada sheet ditulis dalam ribuan rupiah dan sudah dikonversi</p>
                         </div>
                     </div>
-                    <div class="table-responsive">
+                    <div class="table-wrap">
                         <table>
                             <thead>
                                 <tr>
@@ -490,78 +511,62 @@
                             <tbody id="real-body"></tbody>
                         </table>
                     </div>
-                </div>
-            </section>
-
-            <section class="card table-section" id="ang-alokasi-wrap" hidden>
-                <div class="table-header">
-                    <div class="table-title">
-                        <h3 id="ang-alokasi-judul">Alokasi Anggaran</h3>
-                        <p>Rincian pusat, daerah, dan per provinsi</p>
-                    </div>
-                </div>
-                <div class="table-responsive">
-                    <table>
-                        <thead id="ang-alokasi-head"></thead>
-                        <tbody id="ang-alokasi-body"></tbody>
-                    </table>
-                </div>
+                </section>
             </section>
         </main>
 
         <!-- ============================================================= -->
         <!-- MENU 5: DOKUMENTASI   <- sheet 'Dokumentasi'                  -->
-        <!-- Kolom "Dokumentasi Before" & "Dokumentasi After" berisi tautan -->
-        <!-- Google Drive; ditampilkan sebagai pratinjau gambar, bukan link -->
         <!-- ============================================================= -->
-        <main class="main-content page" id="page-dokumentasi">
-            <section class="card table-section" id="dok-section">
-                <div class="table-header">
-                    <div class="table-title">
-                        <h3>Dokumentasi</h3>
-                        <p>Sumber: sheet <em>Dokumentasi</em> - perbandingan kondisi sebelum dan sesudah penanganan</p>
+        <main class="page" id="page-dokumentasi">
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h3>Dokumentasi Kegiatan</h3>
+                        <p>Sumber: sheet <strong>Dokumentasi</strong> &middot; klik gambar untuk membuka berkas aslinya di Google Drive</p>
                     </div>
-                    <span class="badge badge-blue" id="dok-count">0 dokumentasi</span>
+                    <span class="badge badge-primary" id="dok-count">0 dokumentasi</span>
                 </div>
-                <ul class="dok-list" id="dok-list"></ul>
+                <ul class="doc-list" id="dok-list"></ul>
             </section>
         </main>
 
         <!-- ============================================================= -->
         <!-- MENU 6: BERITA   <- sheet 'Berita'                            -->
         <!-- ============================================================= -->
-        <main class="main-content page" id="page-berita">
+        <main class="page" id="page-berita">
 
-            <section class="filter-bar card">
-                <div class="filter-controls">
-                    <div class="filter-group">
-                        <label for="berita-filter-media">Media</label>
-                        <select id="berita-filter-media">
-                            <option value="">Semua Media</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="berita-search">Cari</label>
-                        <input type="text" id="berita-search" placeholder="Cari judul atau media...">
-                    </div>
-                    <div class="filter-actions">
-                        <button id="berita-btn-reset" class="btn-secondary">Reset Filter</button>
-                    </div>
+            <section class="card toolbar">
+                <div class="field">
+                    <label for="berita-filter-media">Media</label>
+                    <select id="berita-filter-media"><option value="">Semua Media</option></select>
                 </div>
+                <div class="search-field">
+                    <i data-lucide="search" class="icon"></i>
+                    <input type="text" id="berita-search" placeholder="Cari judul atau media...">
+                </div>
+                <button id="berita-btn-reset" class="btn btn-ghost">
+                    <i data-lucide="rotate-ccw" class="icon"></i>Reset
+                </button>
             </section>
 
-            <section class="card table-section" id="berita-section">
-                <div class="table-header">
-                    <div class="table-title">
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
                         <h3>Berita &amp; Publikasi</h3>
-                        <p>Sumber: sheet <em>Berita</em></p>
+                        <p>Sumber: sheet <strong>Berita</strong> &middot; liputan media beserta kliping dokumentasinya</p>
                     </div>
-                    <span class="badge badge-blue" id="berita-count">0 berita</span>
+                    <span class="badge badge-primary" id="berita-count">0 berita</span>
                 </div>
-                <ul class="berita-grid" id="berita-grid"></ul>
+                <ul class="news-grid" id="berita-grid"></ul>
             </section>
         </main>
     </div>
+
+    <footer class="footer">
+        <span>&copy; 2026 Kementerian Kelautan dan Perikanan</span>
+        <span>Rencana Induk Rehabilitasi dan Rekonstruksi Pascabencana Sumatera 2026&ndash;2028</span>
+    </footer>
 
     <!-- Konfigurasi, loader live spreadsheet, snapshot per-sheet, lalu logika aplikasi -->
     <script src="config.js"></script>

@@ -20,15 +20,52 @@ document.addEventListener('DOMContentLoaded', () => {
     // Helper umum
     // =========================================================================
 
+    // Palet grafik memakai gradasi biru saja, supaya hijau/merah/oranye tetap
+    // terbaca sebagai penanda status dan bukan sekadar variasi warna.
     const colors = {
-        primary: '#03255C',
-        accent: '#03545C'
+        primary: '#2563eb',
+        primaryDark: '#1e40af',
+        primaryLight: '#93c5fd',
+        neutral: '#cbd5e1',
+        success: '#16a34a',
+        warning: '#ea580c',
+        danger: '#dc2626'
     };
 
     const chartPalette = [
-        '#03255C', '#03545C', '#043685', '#0284c7', '#1c4e99',
-        '#4a7ec9', '#0e7490', '#64748b', '#94a3b8', '#7dd3fc'
+        '#1e3a8a', '#1e40af', '#2563eb', '#3b82f6', '#60a5fa',
+        '#93c5fd', '#bfdbfe', '#64748b', '#94a3b8', '#cbd5e1'
     ];
+
+    /** Kelas status dari persentase capaian - dipakai bar & badge. */
+    const kelasCapaian = (pct) => {
+        if (pct >= 100) return 'is-success';
+        if (pct >= 50) return '';
+        if (pct > 0) return 'is-warning';
+        return 'is-danger';
+    };
+
+    const badgeCapaian = (pct) => {
+        if (pct >= 100) return 'badge-success';
+        if (pct >= 50) return 'badge-primary';
+        if (pct > 0) return 'badge-warning';
+        return 'badge-danger';
+    };
+
+    /** Bar capaian: lebih cepat dibaca daripada deretan angka persen. */
+    const barCapaian = (pct) => {
+        const lebar = Math.max(0, Math.min(pct, 100));
+        return '<div class="progress">' +
+            '<span class="progress-track"><span class="progress-fill ' + kelasCapaian(pct) + '" ' +
+                'style="width:' + lebar.toFixed(1) + '%"></span></span>' +
+            '<span class="progress-value">' + pct.toFixed(1) + '%</span>' +
+        '</div>';
+    };
+
+    /** Render ulang ikon Lucide setelah konten dinamis dimasukkan ke DOM. */
+    const gambarIkon = () => {
+        if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
+    };
 
     /** "Rp13.900.000.000" / "13,900,000,000" -> 13900000000 */
     const parseRupiah = (str) => {
@@ -134,6 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         mkBtn('Sebelumnya', page - 1, page === 1);
         mkBtn('Selanjutnya', page + 1, page === totalPages);
+        gambarIkon();
     };
 
     // =========================================================================
@@ -156,6 +194,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================================
     // Navigasi - menu hanya muncul bila sheet-nya berisi data
     // =========================================================================
+
+    /** Judul & deskripsi tiap menu, ditampilkan di kepala halaman. */
+    const INFO_MENU = {
+        terdampak:   ['Lokasi Terdampak', 'Sebaran pelaku usaha, sarana, dan lahan yang terdampak bencana'],
+        aksi:        ['Rencana Aksi', 'Program dan alokasi anggaran pemulihan tahun 2026 - 2028'],
+        progres:     ['Progres Pelaksanaan', 'Capaian kegiatan pemulihan per kabupaten/kota'],
+        anggaran:    ['Anggaran & Realisasi', 'Usulan, alokasi, dan serapan anggaran pemulihan'],
+        dokumentasi: ['Dokumentasi', 'Perbandingan kondisi sebelum dan sesudah penanganan'],
+        berita:      ['Berita & Publikasi', 'Liputan media atas pelaksanaan pemulihan']
+    };
 
     const MENUS = [
         { page: 'terdampak', ada: () => store.terdampak.length > 0 },
@@ -185,6 +233,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const el = document.getElementById(`page-${m.page}`);
             if (el) el.classList.toggle('active', m.page === name);
         });
+
+        const info = INFO_MENU[name];
+        if (info) {
+            setText('page-title', info[0]);
+            setText('page-desc', info[1]);
+        }
 
         if (history.replaceState) history.replaceState(null, '', `#${name}`);
 
@@ -517,9 +571,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${dash(item.no)}</td>
                 <td>${dash(item.provinsi)}</td>
                 <td>${dash(item.kabKota)}</td>
-                <td><span class="badge badge-blue">${dash(item.jenis)}</span></td>
+                <td><span class="badge badge-primary">${dash(item.jenis)}</span></td>
                 <td class="cell-truncate" title="${esc(item.kategori)}">${dash(item.kategori)}</td>
-                <td class="num" style="font-weight:600;">${formatAngka(item.jumlah)}</td>
+                <td class="num cell-strong">${formatAngka(item.jumlah)}</td>
                 <td>${dash(item.satuan)}</td>
             `;
             tbody.appendChild(tr);
@@ -740,16 +794,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${dash(r.no)}</td>
                 <td>${dash(r.provinsi)}</td>
                 <td class="cell-truncate" title="${esc(r.program)}">${dash(r.program)}</td>
-                <td class="cell-truncate" title="${esc(r.kegiatan)}" style="font-weight:500;">${dash(r.kegiatan)}</td>
+                <td class="cell-truncate cell-strong" title="${esc(r.kegiatan)}">${dash(r.kegiatan)}</td>
                 <td class="cell-truncate" title="${esc(r.lokasi)}">${dash(r.lokasi)}</td>
-                <td><span class="badge badge-gray">${dash(r.sumber)}</span></td>
+                <td><span class="badge badge-neutral">${dash(r.sumber)}</span></td>
                 <td class="cell-truncate" title="${esc(r.output2026)}">${dash(r.output2026)}</td>
                 <td class="num">${rp(r.anggaran2026)}</td>
                 <td class="cell-truncate" title="${esc(r.output2027)}">${dash(r.output2027)}</td>
                 <td class="num">${rp(r.anggaran2027)}</td>
                 <td class="cell-truncate" title="${esc(r.output2028)}">${dash(r.output2028)}</td>
                 <td class="num">${rp(r.anggaran2028)}</td>
-                <td class="num" style="font-weight:600;color:#03255C;">${rp(r.totalAnggaran)}</td>
+                <td class="num cell-primary">${rp(r.totalAnggaran)}</td>
             </tr>`).join('');
 
         renderPagination('ra-pagination', rows.length, aksiState.page, aksiState.perPage, (p) => {
@@ -859,12 +913,6 @@ document.addEventListener('DOMContentLoaded', () => {
         filters: { kabKota: '', search: '' }
     };
 
-    const progresBadge = (pct) => {
-        if (pct >= 100) return 'badge-green';
-        if (pct > 0) return 'badge-blue';
-        return 'badge-gray';
-    };
-
     const renderProgresSummary = () => {
         const rows = progresState.filtered;
         const target = rows.reduce((s, r) => s + r.targetAnggaran, 0);
@@ -884,7 +932,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const rows = progresState.filtered;
         if (rows.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="16" class="table-empty">
+            tbody.innerHTML = `<tr><td colspan="15" class="table-empty">
                 <strong>Tidak ada data yang ditemukan.</strong>
                 Coba ubah filter kab/kota atau kata kunci pencarian.
             </td></tr>`;
@@ -899,19 +947,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${dash(item.no)}</td>
                 <td>${dash(item.unitEselon)}</td>
                 <td>${dash(item.kabKota)}</td>
-                <td class="cell-truncate" title="${esc(item.kegiatan)}" style="font-weight:500;">${dash(item.kegiatan)}</td>
+                <td class="cell-truncate cell-strong" title="${esc(item.kegiatan)}">${dash(item.kegiatan)}</td>
                 <td class="cell-truncate" title="${esc(item.desa)}">${dash(item.desa)}</td>
                 <td class="num">${dash(item.targetVolume)}</td>
-                <td>${dash(item.targetSatuan)}</td>
+                <td>${dash(item.targetSatuan || item.realisasiSatuan)}</td>
                 <td class="num">${item.targetAnggaran ? formatRupiah(item.targetAnggaran) : '-'}</td>
                 <td class="num">${dash(item.realisasiVolume)}</td>
-                <td>${dash(item.realisasiSatuan)}</td>
                 <td class="num">${item.realisasiAnggaran ? formatRupiah(item.realisasiAnggaran) : '-'}</td>
-                <td class="num"><span class="badge ${progresBadge(item.persentase)}">${item.persentase.toFixed(1)}%</span></td>
+                <td>${barCapaian(item.persentase)}</td>
                 <td>${dash(item.targetPenyelesaian)}</td>
                 <td class="cell-truncate" title="${esc(item.penerima)}">${dash(item.penerima)}</td>
                 <td class="cell-truncate" title="${esc(item.keterangan)}">${dash(item.keterangan)}</td>
-                <td>${item.statusBantuan ? `<span class="badge badge-gray">${esc(item.statusBantuan)}</span>` : '-'}</td>
+                <td>${item.statusBantuan ? `<span class="badge badge-neutral">${esc(item.statusBantuan)}</span>` : '-'}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -1102,9 +1149,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 labels: units,
                 datasets: [
                     { label: a.usulan.judul, data: units.map(u => nilaiDari(a.usulan.items, u)),
-                      backgroundColor: colors.primary, borderRadius: 4 },
+                      backgroundColor: colors.primaryLight, borderRadius: 4 },
                     { label: a.abt.judul, data: units.map(u => nilaiDari(a.abt.items, u)),
-                      backgroundColor: colors.accent, borderRadius: 4 }
+                      backgroundColor: colors.primary, borderRadius: 4 }
                 ]
             };
             if (chartAnggaran) {
@@ -1146,10 +1193,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tbody.innerHTML = a.alokasi.baris.map(b => {
             const utama = /^(total|pusat|daerah)/i.test(b.label);
-            return `<tr${utama ? ' style="font-weight:600;"' : ''}>
+            return `<tr class="${utama ? 'row-group' : ''}">
                 <td>${dash(b.label)}</td>
                 ${b.nilai.map(v => `<td class="num">${v ? formatRupiah(v) : '-'}</td>`).join('')}
-                <td class="num" style="color:#03255C;font-weight:600;">${b.total ? formatRupiah(b.total) : '-'}</td>
+                <td class="num cell-primary">${b.total ? formatRupiah(b.total) : '-'}</td>
             </tr>`;
         }).join('');
     };
@@ -1279,9 +1326,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 labels: kelompok.map(k => labelPendek(k.nama)),
                 datasets: [
                     { label: 'Target', data: kelompok.map(k => k.targetAnggaran),
-                      backgroundColor: colors.primary, borderRadius: 4 },
+                      backgroundColor: colors.neutral, borderRadius: 4 },
                     { label: 'Realisasi', data: kelompok.map(k => k.realisasiAnggaran),
-                      backgroundColor: colors.accent, borderRadius: 4 }
+                      backgroundColor: colors.primary, borderRadius: 4 }
                 ]
             };
             if (realisasiState.charts.kelompok) {
@@ -1314,9 +1361,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 labels: sumber.map(b => b.nama + ' (' + b.persentase.toFixed(1) + '%)'),
                 datasets: [
                     { label: 'Target', data: sumber.map(b => b.target),
-                      backgroundColor: colors.primary, borderRadius: 4 },
+                      backgroundColor: colors.neutral, borderRadius: 4 },
                     { label: 'Realisasi', data: sumber.map(b => b.realisasi),
-                      backgroundColor: colors.accent, borderRadius: 4 }
+                      backgroundColor: colors.primary, borderRadius: 4 }
                 ]
             };
             if (realisasiState.charts.sumber) {
@@ -1348,21 +1395,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tbody.innerHTML = blok.baris.map(b => {
             const kelompok = b.level === 'kelompok';
-            const pct = Math.min(b.persentase, 100);
-            // Bar tipis lebih cepat dibaca daripada deretan angka persen.
-            const bar =
-                '<div class="serap">' +
-                    '<div class="serap-rel"><span style="width:' + pct.toFixed(1) + '%"></span></div>' +
-                    '<span class="serap-teks">' + b.persentase.toFixed(1) + '%</span>' +
-                '</div>';
-
-            return '<tr class="' + (kelompok ? 'baris-kelompok' : 'baris-rincian') + '">' +
+            return '<tr class="' + (kelompok ? 'row-group' : 'row-child') + '">' +
                 '<td class="cell-truncate" title="' + esc(b.nama) + '">' + dash(b.nama) + '</td>' +
                 '<td class="num">' + dash(b.targetVolume) + '</td>' +
                 '<td class="num">' + rp(b.targetAnggaran) + '</td>' +
                 '<td class="num">' + dash(b.realisasiVolume) + '</td>' +
                 '<td class="num">' + rp(b.realisasiAnggaran) + '</td>' +
-                '<td>' + bar + '</td>' +
+                '<td>' + barCapaian(b.persentase) + '</td>' +
             '</tr>';
         }).join('');
     };
@@ -1439,29 +1478,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Gambar yang gagal dimuat (berkas Drive belum dishare publik) diganti
         // pesan agar tidak menyisakan kotak kosong tanpa penjelasan.
-        const sisi = (d, label) => {
-            if (!d.url) return `<div class="dok-sisi dok-sisi--kosong"><span class="dok-label">${label}</span>
-                <div class="dok-gagal">Belum diisi</div></div>`;
-            if (!d.gambar) return `<div class="dok-sisi"><span class="dok-label">${label}</span>
-                <div class="dok-gagal">Tautan bukan berkas Google Drive</div></div>`;
-            return `<div class="dok-sisi">
-                <span class="dok-label">${label}</span>
+        const sisi = (d, label, kelas, ikon) => {
+            const tag = `<span class="doc-tag ${kelas}"><i data-lucide="${ikon}" class="icon"></i>${label}</span>`;
+            if (!d.url) return `<div class="doc-side is-empty">${tag}
+                <div class="doc-fallback">Belum diisi</div></div>`;
+            if (!d.gambar) return `<div class="doc-side is-empty">${tag}
+                <div class="doc-fallback">Tautan bukan berkas Google Drive</div></div>`;
+            return `<div class="doc-side">
+                ${tag}
                 <a href="${esc(d.url)}" target="_blank" rel="noopener noreferrer" title="Buka berkas asli di Google Drive">
                     <img src="${esc(d.gambar)}" alt="Dokumentasi ${label}" loading="lazy"
-                         onerror="this.closest('.dok-sisi').classList.add('is-gagal')">
+                         onerror="this.closest('.doc-side').classList.add('is-failed')">
                 </a>
-                <div class="dok-gagal">Gambar tidak dapat dimuat - berkas Drive belum dishare publik</div>
+                <div class="doc-fallback">Gambar tidak dapat dimuat - berkas Drive belum dishare publik</div>
             </div>`;
         };
 
         list.innerHTML = items.map(d => `
-            <li class="dok-pasangan">
-                <span class="dok-nomor">${d.no}</span>
-                <div class="dok-banding">
-                    ${sisi(d.before, 'Before')}
-                    ${sisi(d.after, 'After')}
+            <li class="doc-item">
+                <span class="doc-no">${d.no}</span>
+                <div class="doc-pair">
+                    ${sisi(d.before, 'Before', 'is-before', 'circle-alert')}
+                    ${sisi(d.after, 'After', 'is-after', 'circle-check')}
                 </div>
             </li>`).join('');
+        gambarIkon();
     };
 
     // =========================================================================
@@ -1522,7 +1563,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         grid.innerHTML = items.map(b => {
             const thumb = b.gambarDokumentasi
-                ? `<a class="berita-thumb" href="${esc(b.linkDokumentasi)}" target="_blank" rel="noopener noreferrer"
+                ? `<a class="news-thumb" href="${esc(b.linkDokumentasi)}" target="_blank" rel="noopener noreferrer"
                        title="Buka kliping asli di Google Drive">
                        <img src="${esc(b.gambarDokumentasi)}" alt="Kliping: ${esc(b.judul)}" loading="lazy">
                    </a>`
@@ -1531,18 +1572,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? `<a href="${esc(b.link)}" target="_blank" rel="noopener noreferrer">${dash(b.judul)}</a>`
                 : dash(b.judul);
 
-            return `<li class="berita-card">
+            return `<li class="news-card">
                 ${thumb}
-                <div class="berita-body">
-                    <div class="berita-meta">
-                        <span class="badge badge-blue">${dash(b.media)}</span>
-                        <span class="berita-tanggal">${dash(b.tanggal)}</span>
+                <div class="news-body">
+                    <div class="news-meta">
+                        <span class="badge badge-primary">${dash(b.media)}</span>
+                        <span class="news-date"><i data-lucide="calendar" class="icon"></i>${dash(b.tanggal)}</span>
                     </div>
-                    <p class="berita-judul">${judul}</p>
-                    ${b.link ? '' : '<span class="berita-dok berita-dok--mati">Tautan artikel belum diisi</span>'}
+                    <p class="news-title">${judul}</p>
+                    ${b.link ? '' : '<span class="news-nolink"><i data-lucide="link-2-off" class="icon"></i>Tautan artikel belum diisi</span>'}
                 </div>
             </li>`;
         }).join('');
+        gambarIkon();
     };
 
     const setupBerita = () => {
@@ -1586,6 +1628,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderDokumentasi();
 
         syncMenuVisibility();
+        gambarIkon();
     };
 
     setupNav();
