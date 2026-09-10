@@ -1,0 +1,5 @@
+# Konfigurasi server dev lokal, tidak dipakai saat hosting
+.claude/
+
+# Arsip/salinan spreadsheet - sumber data sebenarnya ada di Google Spreadsheet
+*.xlsx
