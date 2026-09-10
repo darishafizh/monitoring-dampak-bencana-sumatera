@@ -11,6 +11,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
+    <!-- Leaflet untuk peta spasial -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+
     <!-- Chart.js untuk grafik, Lucide untuk ikon garis (bukan emoji) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.544.0/dist/umd/lucide.min.js"></script>
@@ -132,6 +136,18 @@
                 </div>
             </section>
 
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h3>Peta Sebaran Dampak</h3>
+                        <p>Ukuran lingkaran sebanding dengan jumlah terdampak; klik untuk rincian per kategori</p>
+                    </div>
+                    <span class="badge badge-neutral" id="td-peta-info">&mdash;</span>
+                </div>
+                <div class="map-box" id="map-terdampak"></div>
+                <p class="panel-note" id="td-peta-note"></p>
+            </section>
+
             <section class="grid-2">
                 <div class="panel">
                     <div class="panel-head">
@@ -238,6 +254,18 @@
                         <p class="stat-value" id="ra-stat-kabkota">0</p>
                     </div>
                 </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h3>Peta Sebaran Rencana Aksi</h3>
+                        <p>Ukuran lingkaran sebanding dengan anggaran per kabupaten/kota; klik untuk rincian kegiatan</p>
+                    </div>
+                    <span class="badge badge-neutral" id="ra-peta-info">&mdash;</span>
+                </div>
+                <div class="map-box" id="map-aksi"></div>
+                <p class="panel-note" id="ra-peta-note"></p>
             </section>
 
             <section class="grid-2">
@@ -570,6 +598,7 @@
 
     <!-- Konfigurasi, loader live spreadsheet, snapshot per-sheet, lalu logika aplikasi -->
     <script src="config.js"></script>
+    <script src="koordinat.js"></script>
     <script src="sheets.js"></script>
     <script src="data-snapshot.js"></script>
     <script src="script.js"></script>

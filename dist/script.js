@@ -217,14 +217,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const menuAktif = () => MENUS.filter(m => m.ada()).map(m => m.page);
 
-    /** Ukur ulang seluruh grafik di dalam sebuah halaman setelah ia ditampilkan. */
+    /**
+     * Ukur ulang seluruh grafik di dalam sebuah halaman setelah ia ditampilkan.
+     *
+     * Sengaja dipanggil langsung, bukan lewat requestAnimationFrame: rAF tidak
+     * dijalankan browser selama tab/panelnya tidak digambar, sehingga grafik dan
+     * peta bisa tetap berukuran nol. getBoundingClientRect() di dalam Chart.js
+     * dan Leaflet sudah memaksa perhitungan layout, jadi ukurannya tetap benar.
+     */
     const resizeGrafik = (pageEl) => {
         if (!pageEl || !window.Chart) return;
-        requestAnimationFrame(() => {
-            pageEl.querySelectorAll('canvas').forEach(cv => {
-                const ch = Chart.getChart(cv);
-                if (ch) ch.resize();
-            });
+        pageEl.querySelectorAll('canvas').forEach(cv => {
+            const ch = Chart.getChart(cv);
+            if (ch) ch.resize();
         });
     };
 
@@ -257,7 +262,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // berukuran 0x0. Event resize global tidak selalu memicu Chart.js
         // mengukur ulang, jadi tiap grafik di halaman aktif di-resize eksplisit
         // setelah layout selesai dihitung.
-        resizeGrafik(document.getElementById(`page-${name}`));
+        const pageEl = document.getElementById(`page-${name}`);
+        resizeGrafik(pageEl);
+        resizePeta(pageEl, name);
     };
 
     /** Sembunyikan tombol & halaman milik sheet yang kosong. */
@@ -601,6 +608,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderTerdampak = () => {
         renderTerdampakSummary();
+        renderPetaTerdampak();
         renderTerdampakDonut('chart-jenis', 'jenis', groupTerdampak(terdampakState.filtered, 'jenis'));
         renderTerdampakDonut('chart-kategori', 'kategori', groupTerdampak(terdampakState.filtered, 'kategori'));
         renderTerdampakTable();
@@ -828,6 +836,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderAksi = () => {
         renderAksiSummary();
+        renderPetaAksi();
         renderAksiCharts();
         renderAksiTable();
     };
@@ -1436,6 +1445,250 @@ document.addEventListener('DOMContentLoaded', () => {
         sel.addEventListener('change', (e) => {
             realisasiState.blokAktif = parseInt(e.target.value, 10) || 0;
             renderRealisasi();
+        });
+    };
+
+    // =========================================================================
+    // PETA SPASIAL (Leaflet)
+    //
+    // Spreadsheet tidak memuat kolom lintang/bujur, jadi koordinat diambil dari
+    // tabel rujukan di koordinat.js berdasarkan nama wilayah. Wilayah yang tidak
+    // ada di tabel TIDAK ditaruh sembarangan di peta, melainkan dihitung sebagai
+    // "belum terpetakan" dan dilaporkan di bawah peta.
+    // =========================================================================
+
+    const petaState = { terdampak: null, aksi: null };
+
+    const PETA_TENGAH = [2.5, 98.5];   // kira-kira tengah ketiga provinsi
+    const PETA_ZOOM = 6;
+
+    /**
+     * Penyedia peta dasar. Tile OpenStreetMap resmi menolak permintaan dengan
+     * HTTP 403 pada sebagian jaringan karena kebijakan pemakaiannya, jadi yang
+     * dipakai adalah CARTO (mengizinkan penyematan, dan tampilannya netral
+     * sehingga penanda biru tetap menonjol). Bila tile-nya tetap gagal, peta
+     * berpindah sendiri ke penyedia cadangan.
+     */
+    const PENYEDIA_PETA = [
+        {
+            // Mirror OSM Jerman: bebas API key dan tanpa watermark.
+            // Tile openstreetmap.org resmi menolak dengan HTTP 403 pada sebagian
+            // jaringan, sedangkan CARTO kini mengembalikan tile bertuliskan
+            // "API KEY REQUIRED" - keduanya sengaja tidak dipakai.
+            nama: 'OSM DE',
+            url: 'https://tile.openstreetmap.de/{z}/{x}/{y}.png',
+            opsi: {
+                maxZoom: 18,
+                attribution: '&copy; Kontributor <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            }
+        },
+        {
+            nama: 'Wikimedia',
+            url: 'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png',
+            opsi: {
+                maxZoom: 18,
+                attribution: '&copy; Kontributor <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, Wikimedia'
+            }
+        }
+    ];
+
+    /** Pasang lapisan peta dasar, pindah ke cadangan bila tile-nya ditolak. */
+    const pasangBasemap = (map, indeks = 0) => {
+        const p = PENYEDIA_PETA[indeks];
+        if (!p) return null;
+
+        const layer = L.tileLayer(p.url, p.opsi).addTo(map);
+        let gagal = 0;
+
+        layer.on('tileerror', () => {
+            // Beberapa tile gagal masih wajar; kegagalan beruntun berarti
+            // penyedianya menolak (mis. 403) sehingga perlu diganti.
+            if (++gagal < 4 || !PENYEDIA_PETA[indeks + 1]) return;
+            console.warn(`[Peta] Tile ${p.nama} ditolak, beralih ke ${PENYEDIA_PETA[indeks + 1].nama}.`);
+            map.removeLayer(layer);
+            pasangBasemap(map, indeks + 1);
+        });
+
+        return layer;
+    };
+
+    const petaTersedia = () => typeof L !== 'undefined';
+
+    /** Buat peta sekali saja; pemanggilan berikutnya memakai instance yang ada. */
+    const siapkanPeta = (kunci, elId) => {
+        if (!petaTersedia()) return null;
+        if (petaState[kunci]) return petaState[kunci];
+
+        const el = document.getElementById(elId);
+        if (!el) return null;
+
+        // Leaflet menghitung berapa tile yang perlu diambil dari ukuran kontainer.
+        // Kalau peta dibuat saat halamannya masih display:none, ukurannya 0 dan
+        // Leaflet hanya mengambil satu tile - petanya tampak kosong. Jadi
+        // pembuatannya ditunda sampai kontainernya benar-benar punya ukuran.
+        if (!el.getBoundingClientRect().width) return null;
+
+        const map = L.map(el, { scrollWheelZoom: false }).setView(PETA_TENGAH, PETA_ZOOM);
+        pasangBasemap(map);
+
+        // Scroll halaman tidak boleh "tersangkut" zoom; zoom baru aktif setelah diklik.
+        map.on('click', () => map.scrollWheelZoom.enable());
+        map.on('mouseout', () => map.scrollWheelZoom.disable());
+
+        petaState[kunci] = { map, layer: L.layerGroup().addTo(map) };
+        return petaState[kunci];
+    };
+
+    /**
+     * Radius lingkaran dibuat sebanding dengan AKAR nilainya, bukan nilainya
+     * langsung - supaya luas lingkaran (yang dibaca mata) yang sebanding dengan
+     * nilai, bukan jari-jarinya. Kalau memakai nilai langsung, satu wilayah
+     * besar akan menenggelamkan semua yang lain.
+     */
+    const radiusDari = (nilai, maks) => {
+        if (!maks || nilai <= 0) return 6;
+        return 8 + Math.sqrt(nilai / maks) * 26;
+    };
+
+    const gambarTitik = (peta, titik, opsi) => {
+        peta.layer.clearLayers();
+        if (!titik.length) return;
+
+        const maks = Math.max(...titik.map(t => t.nilai));
+        const batas = [];
+
+        titik.forEach(t => {
+            const m = L.circleMarker([t.lat, t.lng], {
+                radius: radiusDari(t.nilai, maks),
+                color: '#1d4ed8',
+                weight: 1.5,
+                fillColor: '#2563eb',
+                fillOpacity: 0.45
+            }).addTo(peta.layer);
+
+            m.bindPopup(opsi.popup(t), { maxWidth: 300 });
+            m.bindTooltip(t.nama, { direction: 'top', offset: [0, -4] });
+            batas.push([t.lat, t.lng]);
+        });
+
+        if (batas.length) peta.map.fitBounds(batas, { padding: [40, 40], maxZoom: 9 });
+    };
+
+    /** Peta menu Lokasi Terdampak - agregat per provinsi. */
+    const renderPetaTerdampak = () => {
+        const peta = siapkanPeta('terdampak', 'map-terdampak');
+        if (!peta) return;
+
+        const rows = terdampakState.filtered;
+        const perProvinsi = {};
+        let belum = 0;
+
+        rows.forEach(r => {
+            const koord = cariKoordinatProvinsi(r.provinsi);
+            if (!koord) { belum++; return; }
+            const k = r.provinsi;
+            if (!perProvinsi[k]) {
+                perProvinsi[k] = { nama: k, lat: koord.lat, lng: koord.lng, nilai: 0, rincian: [] };
+            }
+            perProvinsi[k].nilai += r.jumlah;
+            perProvinsi[k].rincian.push(r);
+        });
+
+        const titik = Object.values(perProvinsi);
+        gambarTitik(peta, titik, {
+            popup: (t) => {
+                const perSatuan = {};
+                t.rincian.forEach(r => {
+                    const s = r.satuan || 'Tanpa satuan';
+                    perSatuan[s] = (perSatuan[s] || 0) + r.jumlah;
+                });
+                const baris = Object.entries(perSatuan)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([s, v]) => `<li>${formatAngka(v)} ${esc(s)}</li>`).join('');
+                return `<strong>${esc(t.nama)}</strong>
+                    <ul class="map-popup-list">${baris}</ul>
+                    <span class="map-popup-foot">${t.rincian.length} baris data</span>`;
+            }
+        });
+
+        setText('td-peta-info', `${titik.length} provinsi`);
+        const note = document.getElementById('td-peta-note');
+        if (note) {
+            note.textContent = belum
+                ? `${belum} baris belum terpetakan karena nama provinsinya tidak dikenali.`
+                : 'Sheet Lokasi Terdampak belum mengisi kolom Kabupaten/Kota, sehingga peta baru dapat menampilkan agregat tingkat provinsi.';
+        }
+    };
+
+    /** Peta menu Rencana Aksi - agregat per kabupaten/kota. */
+    const renderPetaAksi = () => {
+        const peta = siapkanPeta('aksi', 'map-aksi');
+        if (!peta) return;
+
+        const rows = aksiState.filtered;
+        const perWilayah = {};
+        const belum = new Set();
+
+        rows.forEach(r => {
+            // Anggaran satu baris dibagi rata ke seluruh wilayah yang disebut,
+            // supaya totalnya tidak menggelembung saat dijumlahkan antar titik.
+            const wilayah = [];
+            pecahLokasi(r.lokasi).forEach(n => pecahNamaGanda(n).forEach(x => wilayah.push(x)));
+            if (!wilayah.length) return;
+
+            const porsi = r.totalAnggaran / wilayah.length;
+            wilayah.forEach(nama => {
+                const koord = cariKoordinat(nama);
+                if (!koord) { belum.add(nama); return; }
+                const k = `${koord.lat},${koord.lng}`;
+                if (!perWilayah[k]) {
+                    perWilayah[k] = {
+                        nama: nama.replace(/^\s*\d+[.)]?\s*/, ''),
+                        lat: koord.lat, lng: koord.lng,
+                        provinsi: koord.provinsi, nilai: 0, kegiatan: new Set()
+                    };
+                }
+                perWilayah[k].nilai += porsi;
+                perWilayah[k].kegiatan.add(r.kegiatan);
+            });
+        });
+
+        const titik = Object.values(perWilayah);
+        gambarTitik(peta, titik, {
+            popup: (t) => {
+                const daftar = [...t.kegiatan].slice(0, 5)
+                    .map(k => `<li>${esc(k)}</li>`).join('');
+                const sisa = t.kegiatan.size > 5 ? `<span class="map-popup-foot">+${t.kegiatan.size - 5} kegiatan lain</span>` : '';
+                return `<strong>${esc(t.nama)}</strong>
+                    <span class="map-popup-sub">${esc(t.provinsi || '')}</span>
+                    <span class="map-popup-nilai">${formatRupiah(t.nilai)}</span>
+                    <ul class="map-popup-list">${daftar}</ul>${sisa}`;
+            }
+        });
+
+        setText('ra-peta-info', `${titik.length} kab/kota`);
+        const note = document.getElementById('ra-peta-note');
+        if (note) {
+            note.textContent = belum.size
+                ? `Anggaran tiap baris dibagi rata ke seluruh kab/kota yang disebut. ${belum.size} nama belum terpetakan: ${[...belum].join(', ')}.`
+                : 'Anggaran tiap baris dibagi rata ke seluruh kab/kota yang disebut pada baris tersebut.';
+        }
+    };
+
+    /**
+     * Leaflet menghitung ukuran peta saat dibuat. Karena halaman awalnya
+     * display:none, ukurannya 0 dan peta tampil abu-abu sampai diberi tahu
+     * untuk mengukur ulang - sama seperti kasus canvas Chart.js.
+     */
+    const resizePeta = (pageEl, nama) => {
+        if (!pageEl || !petaTersedia()) return;
+
+        // Bangun peta yang tertunda karena halamannya belum terlihat.
+        if (nama === 'terdampak' && !petaState.terdampak) renderPetaTerdampak();
+        if (nama === 'aksi' && !petaState.aksi) renderPetaAksi();
+
+        Object.values(petaState).forEach(p => {
+            if (p && p.map && pageEl.contains(p.map.getContainer())) p.map.invalidateSize();
         });
     };
 

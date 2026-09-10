@@ -1084,3 +1084,74 @@ th.num, td.num {
         justify-content: center;
     }
 }
+
+/* ==========================================================================
+   Peta spasial (Leaflet)
+   ========================================================================== */
+
+.map-box {
+    height: 420px;
+    width: 100%;
+    background-color: var(--surface-alt);
+}
+
+/* Leaflet menyuntik fontnya sendiri; samakan dengan dashboard */
+.leaflet-container {
+    font-family: inherit;
+    font-size: 0.8125rem;
+}
+
+.leaflet-popup-content-wrapper {
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+}
+
+.leaflet-popup-content {
+    margin: var(--space-3) var(--space-4);
+    line-height: 1.5;
+}
+
+.leaflet-popup-content strong {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--text);
+}
+
+.map-popup-sub {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.map-popup-nilai {
+    display: block;
+    margin-top: var(--space-1);
+    font-size: 0.9375rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--primary-dark);
+}
+
+.map-popup-list {
+    margin: var(--space-2) 0 0;
+    padding-left: 1.1rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.map-popup-list li {
+    margin-bottom: 2px;
+}
+
+.map-popup-foot {
+    display: block;
+    margin-top: var(--space-2);
+    font-size: 0.6875rem;
+    color: var(--text-light);
+}
+
+@media (max-width: 640px) {
+    .map-box {
+        height: 320px;
+    }
+}
