@@ -17,7 +17,7 @@ AKAR = os.path.join(os.path.dirname(__file__), '..')
 DIST = os.path.join(AKAR, 'dist')
 
 # Berkas yang ikut diunggah. Yang TIDAK ikut: berkas sumber di assets/geo
-# (CSV/GeoJSON mentah, ~6 MB), skrip .ps1, arsip .xlsx, dan folder .claude.
+# (GeoJSON mentah, ~15 MB), skrip .ps1, arsip .xlsx, dan folder .claude.
 BERKAS = [
     'index.html',
     'style.css',

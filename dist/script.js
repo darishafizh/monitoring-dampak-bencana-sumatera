@@ -1639,8 +1639,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // MENU PENERIMA BANTUAN
     //
     // Berbeda dari menu lain, sumbernya BUKAN spreadsheet melainkan berkas
-    // statis assets/geo/penerima.json - hasil gabungan tiga berkas survei di
-    // assets/geo (CSV Aceh + GeoJSON Sumbar & Sumut) yang dibangun oleh
+    // statis assets/geo/penerima.json - hasil gabungan tiga GeoJSON survei di
+    // assets/geo (Aceh, Sumbar, Sumut) yang dibangun oleh
     // tools/build-penerima.py. Jalankan skrip itu lagi bila datanya diperbarui.
     //
     // Isinya belasan ribu titik, jadi berkasnya dipadatkan dengan encoding
@@ -2000,7 +2000,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const note = document.getElementById('pn-peta-note');
         if (note) {
-            note.textContent = 'Sumber: berkas survei di assets/geo (CSV Aceh, GeoJSON Sumatera Barat & Sumatera Utara), '
+            note.textContent = 'Sumber: berkas GeoJSON survei di assets/geo (Aceh, Sumatera Barat, Sumatera Utara), '
                 + 'bukan Google Spreadsheet. Warna titik menunjukkan tingkat kerusakan; titik yang berdekatan '
                 + 'digabung menjadi satu lingkaran berangka dan terpisah saat peta diperbesar.';
         }

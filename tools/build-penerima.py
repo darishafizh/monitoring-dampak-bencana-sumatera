@@ -3,15 +3,17 @@
 Gabungkan data penerima bantuan dari assets/geo menjadi satu berkas ringkas
 yang siap dibaca dashboard: assets/geo/penerima.json
 
-Sumbernya tiga berkas dengan skema berbeda:
-  - ACEH_FIX_USED.csv   (CSV, nama kolom panjang)
-  - Json_Sumbar.geojson (GeoJSON MultiPoint, kolom dipotong 10 huruf oleh QGIS)
-  - Json_Sumut.geojson  (GeoJSON Point)
+Sumbernya tiga GeoJSON hasil ekspor QGIS dengan penamaan kolom berbeda:
+  - Json_Aceh.geojson   nama kolom panjang & apa adanya ("Kabupaten/Kota")
+  - Json_Sumbar.geojson nama kolom dipotong 10 huruf     ("Kabupaten_")
+  - Json_Sumut.geojson  dipotong juga, tapi sebagian kolom beda dari Sumbar
+
+Perbedaan itu ditangani lewat daftar SUMBER di bawah: tiap kolom keluaran
+punya beberapa nama kandidat, dipakai yang pertama ditemukan.
 
 Jalankan ulang setiap kali berkas sumbernya diperbarui:
     python tools/build-penerima.py
 """
-import csv
 import io
 import json
 import os
@@ -21,7 +23,7 @@ from collections import Counter
 BASE = os.path.join(os.path.dirname(__file__), '..', 'assets', 'geo')
 KELUARAN = os.path.join(BASE, 'penerima.json')
 
-# Kotak batas Sumatera bagian utara; dipakai untuk memvalidasi dan memperbaiki koordinat.
+# Kotak batas Sumatera bagian utara; dipakai memvalidasi dan memperbaiki koordinat.
 LAT_MIN, LAT_MAKS = -3.0, 6.5
 LNG_MIN, LNG_MAKS = 94.5, 101.5
 
@@ -37,33 +39,41 @@ def angka(v):
 
 
 def dalam_kotak(la, lo):
-    return LAT_MIN <= la <= LAT_MAKS and LNG_MIN <= lo <= LNG_MAKS
+    return (la is not None and lo is not None
+            and LAT_MIN <= la <= LAT_MAKS and LNG_MIN <= lo <= LNG_MAKS)
 
 
 def perbaiki_koordinat(la, lo):
     """
-    Sebagian baris kehilangan titik desimalnya (mis. lat 3047075 untuk 3.047075,
-    lng 97131078 untuk 97.131078) - khas hasil ekspor spreadsheet. Nilai dibagi
-    10 berulang kali sampai PASANGANNYA masuk kotak batas Sumatera. Berhenti di
-    "asal < 200" tidak cukup: 3047075 akan berhenti di 30.47075 yang masih salah.
+    Kembalikan pasangan (lat, lng) yang masuk akal, atau None.
+
+    Dua kerusakan yang ditemukan pada data survei:
+    1. Titik desimal hilang - lat 3047075 untuk 3.047075, lng 97131078 untuk
+       97.131078. Nilainya dibagi 10 sampai PASANGANNYA masuk kotak batas.
+       Berhenti di "asal < 200" tidak cukup: 3047075 akan berhenti di 30.47075
+       yang masih di luar Sumatera.
+    2. Lintang dan bujur tertukar - lat 96.981478 dengan lng 5.247419.
     """
     if la is None or lo is None:
         return None
     if dalam_kotak(la, lo):
         return (la, lo)
+    if dalam_kotak(lo, la):
+        return (lo, la)
 
     def kandidat(v):
-        hasil, x = [], abs(v)
-        tanda = -1 if v < 0 else 1
+        out, x, tanda = [], abs(v), (-1 if v < 0 else 1)
         for _ in range(10):
-            hasil.append(tanda * x)
+            out.append(tanda * x)
             x /= 10.0
-        return hasil
+        return out
 
     for a in kandidat(la):
         for b in kandidat(lo):
             if dalam_kotak(a, b):
                 return (a, b)
+            if dalam_kotak(b, a):
+                return (b, a)
     return None
 
 
@@ -88,7 +98,10 @@ def normal_kerusakan(v):
         return 'Berat'
     if 'sedang' in s:
         return 'Sedang'
-    if 'ringan' in s:
+    # "ringa" (1 baris) jelas salah ketik "ringan"; nilai lain seperti
+    # "Hilang" atau "Tidak Terdampak" dibiarkan apa adanya karena memang
+    # kategori tersendiri, bukan variasi penulisan.
+    if 'ringan' in s or s == 'ringa':
         return 'Ringan'
     return judul(bersih(v))
 
@@ -117,105 +130,110 @@ def normal_provinsi(v):
 
 
 def normal_kab(v):
-    s = bersih(v)
-    s = re.sub(r'^(Kab\.?|Kabupaten)\s+', '', s, flags=re.I)
+    s = re.sub(r'^(Kab\.?|Kabupaten)\s+', '', bersih(v), flags=re.I)
     return judul(s)
 
 
+# Nama kolom kandidat per kolom keluaran; dipakai yang pertama ditemukan.
+# Menyatukan ketiga skema dalam satu tabel supaya penambahan provinsi baru
+# cukup menambah nama kolomnya di sini, bukan menulis blok pembaca baru.
+KANDIDAT = {
+    'prov':      ['Provinsi'],
+    'kab':       ['Kabupaten/Kota', 'Kabupaten_'],
+    'kec':       ['Kecamatan'],
+    'desa':      ['Desa/Kelurahan', 'Desa_Kelur'],
+    'fasilitas': ['Nama Fasilitas Perikanan terdampak', 'Nama_Fasil'],
+    'nama':      ['Nama'],
+    'alamat':    ['Alamat'],
+    'jenis':     ['Jenis Sarana/Prasarana Terdampak', 'Jenis_Sara'],
+    'jumlah':    ['Jumlah', 'Jumlah_ker'],
+    'satuan':    ['Satuan'],
+    'kerusakan': ['Tingkat Kerusakan', 'Tingkat_Ke'],
+    'status':    ['Status Penanganan', 'Status_Pen'],
+    'wewenang':  ['Tingkat Kewenangan', 'Tingkat__1'],
+    'foto':      ['Foto pascabencana', 'Foto_pasca'],
+}
+
+# Kolom lintang/bujur; Sumbar punya kolom "_baru" hasil pembersihan di QGIS
+# yang lebih bersih daripada kolom aslinya (yang masih memuat tanda derajat).
+KANDIDAT_LAT = ['Lat_baru', 'Latitude']
+KANDIDAT_LNG = ['Long_baru', 'Longitude']
+
+NORMALISATOR = {
+    'prov': normal_provinsi,
+    'kab': normal_kab,
+    'kec': lambda v: judul(bersih(v)),
+    'desa': lambda v: judul(bersih(v)),
+    'kerusakan': normal_kerusakan,
+    'status': normal_status,
+    'wewenang': lambda v: judul(bersih(v)),
+}
+
+SUMBER = ['Json_Aceh.geojson', 'Json_Sumbar.geojson', 'Json_Sumut.geojson']
+
 statistik = Counter()
-
-
-def catat(rec, la, lo):
-    """Simpan satu titik bila koordinatnya sah; kembalikan True kalau dipakai."""
-    baik = perbaiki_koordinat(la, lo)
-    if not baik:
-        statistik['koordinat tidak sah'] += 1
-        return None
-    if not dalam_kotak(la if la else 0, lo if lo else 0):
-        statistik['koordinat diperbaiki'] += 1
-    rec['lat'] = round(baik[0], 6)
-    rec['lng'] = round(baik[1], 6)
-    # NIK sengaja TIDAK disertakan - lihat catatan di bawah berkas ini.
-    return rec
-
-
 hasil = []
 
-# ---------------------------------------------------------------- Aceh (CSV)
-with io.open(os.path.join(BASE, 'ACEH_FIX_USED.csv'), encoding='utf-8', errors='replace') as f:
-    for r in csv.DictReader(f):
-        rec = {
-            'prov': normal_provinsi(r.get('Provinsi')),
-            'kab': normal_kab(r.get('Kabupaten/Kota')),
-            'kec': judul(bersih(r.get('Kecamatan'))),
-            'desa': judul(bersih(r.get('Desa/Kelurahan'))),
-            'fasilitas': bersih(r.get('Nama Fasilitas Perikanan terdampak')),
-            'nama': bersih(r.get('Nama')),
-            'alamat': bersih(r.get('Alamat')),
-            'jenis': bersih(r.get('Jenis Sarana/Prasarana Terdampak')),
-            'jumlah': bersih(r.get('Jumlah')),
-            'satuan': bersih(r.get('Satuan')),
-            'kerusakan': normal_kerusakan(r.get('Tingkat Kerusakan')),
-            'status': normal_status(r.get('Status Penanganan')),
-            'wewenang': judul(bersih(r.get('Tingkat Kewenangan'))),
-            'foto': bersih(r.get('Foto pascabencana')),
-        }
-        p = catat(rec, angka(r.get('Latitude')), angka(r.get('Longitude')))
-        if p:
-            hasil.append(p)
-            statistik['Aceh'] += 1
 
-# ------------------------------------------------------------ Sumbar & Sumut
-GEO = [
-    ('Json_Sumbar.geojson', 'Lat_baru', 'Long_baru', 'Jumlah_ker'),
-    ('Json_Sumut.geojson', 'Latitude', 'Longitude', 'Jumlah'),
-]
+def ambil(props, nama_kandidat):
+    for n in nama_kandidat:
+        if n in props and props[n] is not None:
+            return props[n]
+    return ''
 
-for berkas, latk, lngk, jumk in GEO:
-    with io.open(os.path.join(BASE, berkas), encoding='utf-8') as f:
+
+for berkas in SUMBER:
+    jalur = os.path.join(BASE, berkas)
+    if not os.path.exists(jalur):
+        print('  ! lewati (tidak ada): ' + berkas)
+        continue
+
+    with io.open(jalur, encoding='utf-8') as f:
         fitur = json.load(f).get('features', [])
 
     for x in fitur:
         p = x.get('properties') or {}
-        la, lo = angka(p.get(latk)), angka(p.get(lngk))
 
-        # Cadangan: ambil dari geometry bila kolom lat/lng kosong.
-        if (la is None or lo is None) and x.get('geometry'):
-            g = x['geometry']
+        la = angka(ambil(p, KANDIDAT_LAT))
+        lo = angka(ambil(p, KANDIDAT_LNG))
+
+        # Cadangan: koordinat dari geometry bila kolomnya kosong atau rusak.
+        if not dalam_kotak(la, lo):
+            g = x.get('geometry') or {}
             koor = g.get('coordinates')
             if g.get('type') == 'MultiPoint' and koor:
                 koor = koor[0]
             if isinstance(koor, (list, tuple)) and len(koor) >= 2:
-                lo, la = angka(koor[0]), angka(koor[1])
+                gla, glo = angka(koor[1]), angka(koor[0])
+                if dalam_kotak(gla, glo):
+                    statistik['koordinat diambil dari geometry'] += 1
+                    la, lo = gla, glo
 
-        rec = {
-            'prov': normal_provinsi(p.get('Provinsi')),
-            'kab': normal_kab(p.get('Kabupaten_')),
-            'kec': judul(bersih(p.get('Kecamatan'))),
-            'desa': judul(bersih(p.get('Desa_Kelur'))),
-            'fasilitas': bersih(p.get('Nama_Fasil')),
-            'nama': bersih(p.get('Nama')),
-            'alamat': bersih(p.get('Alamat')),
-            'jenis': bersih(p.get('Jenis_Sara')),
-            'jumlah': bersih(p.get(jumk)),
-            'satuan': bersih(p.get('Satuan')),
-            'kerusakan': normal_kerusakan(p.get('Tingkat_Ke')),
-            'status': normal_status(p.get('Status_Pen')),
-            'wewenang': judul(bersih(p.get('Tingkat__1'))),
-            'foto': bersih(p.get('Foto_pasca')),
-        }
-        rr = catat(rec, la, lo)
-        if rr:
-            hasil.append(rr)
-            statistik[rr['prov'] or berkas] += 1
+        baik = perbaiki_koordinat(la, lo)
+        if not baik:
+            statistik['dibuang: koordinat tidak sah'] += 1
+            continue
+        if not dalam_kotak(la, lo):
+            statistik['koordinat diperbaiki'] += 1
+
+        rec = {}
+        for kunci, nama_kandidat in KANDIDAT.items():
+            mentah = ambil(p, nama_kandidat)
+            rec[kunci] = NORMALISATOR.get(kunci, bersih)(mentah)
+        rec['lat'] = round(baik[0], 6)
+        rec['lng'] = round(baik[1], 6)
+        # NIK ada di ketiga sumber tetapi SENGAJA tidak disertakan - lihat
+        # catatan privasi di akhir berkas ini.
+
+        hasil.append(rec)
+        statistik[rec['prov'] or berkas] += 1
 
 # ---------------------------------------------------------------- pemadatan
 # Sebagai JSON biasa berkasnya >5 MB - terlalu berat untuk dimuat di browser.
 # Nilainya sangat berulang (satu orang punya banyak baris, satu tautan foto
 # dipakai bersama), jadi tiap kolom teks disimpan sekali di "kamus" dan barisnya
 # hanya menyimpan nomor indeks. Ukurannya turun drastis tanpa kehilangan data.
-KOLOM = ['prov', 'kab', 'kec', 'desa', 'fasilitas', 'nama', 'alamat',
-         'jenis', 'jumlah', 'satuan', 'kerusakan', 'status', 'wewenang', 'foto']
+KOLOM = list(KANDIDAT.keys())
 
 kamus = {k: [] for k in KOLOM}
 indeks = {k: {} for k in KOLOM}
@@ -243,10 +261,10 @@ with io.open(KELUARAN, 'w', encoding='utf-8') as f:
     }, f, ensure_ascii=False, separators=(',', ':'))
 
 ukuran = os.path.getsize(KELUARAN) / 1024 / 1024
-print('penerima.json  : %d titik, %.2f MB' % (len(hasil), ukuran))
+print('penerima.json  : %d titik, %.2f MB' % (len(baris), ukuran))
 for k, v in sorted(statistik.items()):
-    print('  %-22s %d' % (k, v))
+    print('  %-32s %d' % (k, v))
 
-# Catatan privasi: kolom NIK ada di ketiga sumber tetapi TIDAK ikut ditulis
-# ke penerima.json. Berkas ini disajikan ke publik lewat dashboard, dan NIK
-# adalah identitas kependudukan yang tidak boleh tersebar.
+# Catatan privasi: kolom NIK ada di ketiga sumber tetapi TIDAK ikut ditulis ke
+# penerima.json. Berkas ini disajikan ke publik lewat dashboard, dan NIK adalah
+# identitas kependudukan yang tidak boleh tersebar.
