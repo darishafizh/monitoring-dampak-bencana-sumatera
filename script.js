@@ -202,6 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
         progres:     ['Progres Pelaksanaan', 'Capaian kegiatan pemulihan per kabupaten/kota'],
         anggaran:    ['Anggaran & Realisasi', 'Usulan, alokasi, dan serapan anggaran pemulihan'],
         dokumentasi: ['Dokumentasi', 'Perbandingan kondisi sebelum dan sesudah penanganan'],
+        penerima:    ['Penerima Bantuan', 'Sebaran titik penerima bantuan hasil survei lapangan'],
         berita:      ['Berita & Publikasi', 'Liputan media atas pelaksanaan pemulihan']
     };
 
@@ -212,25 +213,58 @@ document.addEventListener('DOMContentLoaded', () => {
         // Menu 'Anggaran' menggabungkan sheet 'Anggaran' dan 'Realisasi Anggaran'.
         { page: 'anggaran',  ada: () => store.anggaran !== null || store.realisasi !== null },
         { page: 'dokumentasi', ada: () => store.dokumentasi.length > 0 },
+        { page: 'penerima',  ada: () => penerimaState.semua.length > 0 },
         { page: 'berita',    ada: () => store.berita.length > 0 }
     ];
 
     const menuAktif = () => MENUS.filter(m => m.ada()).map(m => m.page);
 
     /**
-     * Ukur ulang seluruh grafik di dalam sebuah halaman setelah ia ditampilkan.
-     *
-     * Sengaja dipanggil langsung, bukan lewat requestAnimationFrame: rAF tidak
-     * dijalankan browser selama tab/panelnya tidak digambar, sehingga grafik dan
-     * peta bisa tetap berukuran nol. getBoundingClientRect() di dalam Chart.js
-     * dan Leaflet sudah memaksa perhitungan layout, jadi ukurannya tetap benar.
+     * Grafik ulang halaman aktif. Diisi di bagian bawah berkas, setelah fungsi
+     * render tiap menu terdefinisi.
      */
-    const resizeGrafik = (pageEl) => {
+    const RENDER_HALAMAN = {};
+
+    /** Lupakan seluruh instance grafik supaya render berikutnya membuat ulang. */
+    const lupakanGrafik = () => {
+        terdampakState.charts = { jenis: null, kategori: null };
+        aksiState.charts = { tahun: null, provinsi: null };
+        chartAnggaran = null;
+        realisasiState.charts = { kelompok: null, sumber: null };
+        penerimaState.charts = { kerusakan: null, kab: null };
+    };
+
+    /**
+     * Siapkan grafik pada halaman yang baru ditampilkan.
+     *
+     * Grafik dibuat saat halamannya masih display:none, sehingga Chart.js
+     * mencatat ukuran kanvas 0x0 - dan sekali terkunci begitu, ukurannya TIDAK
+     * bisa dipulihkan: resize(), resize(w,h), maupun update() sama-sama tidak
+     * berpengaruh karena gaya inline kanvasnya sudah 0px. Satu-satunya jalan
+     * adalah membuang instance yang terlanjur nol lalu membiarkan fungsi render
+     * halaman itu membuatnya kembali saat kontainernya sudah punya lebar.
+     */
+    const resizeGrafik = (pageEl, nama) => {
         if (!pageEl || !window.Chart) return;
+
+        let adaYangNol = false;
         pageEl.querySelectorAll('canvas').forEach(cv => {
             const ch = Chart.getChart(cv);
-            if (ch) ch.resize();
+            if (!ch) return;
+            const lebarKotak = cv.parentElement.getBoundingClientRect().width;
+            if (cv.width === 0 && lebarKotak > 0) {
+                ch.destroy();
+                adaYangNol = true;
+            } else {
+                ch.resize();
+            }
         });
+
+        if (adaYangNol) {
+            lupakanGrafik();
+            const render = RENDER_HALAMAN[nama];
+            if (render) render();
+        }
     };
 
     const showPage = (name) => {
@@ -263,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // mengukur ulang, jadi tiap grafik di halaman aktif di-resize eksplisit
         // setelah layout selesai dihitung.
         const pageEl = document.getElementById(`page-${name}`);
-        resizeGrafik(pageEl);
+        resizeGrafik(pageEl, name);
         resizePeta(pageEl, name);
     };
 
@@ -608,7 +642,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderTerdampak = () => {
         renderTerdampakSummary();
-        renderPetaTerdampak();
         renderTerdampakDonut('chart-jenis', 'jenis', groupTerdampak(terdampakState.filtered, 'jenis'));
         renderTerdampakDonut('chart-kategori', 'kategori', groupTerdampak(terdampakState.filtered, 'kategori'));
         renderTerdampakTable();
@@ -836,7 +869,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderAksi = () => {
         renderAksiSummary();
-        renderPetaAksi();
         renderAksiCharts();
         renderAksiTable();
     };
@@ -1449,15 +1481,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // =========================================================================
-    // PETA SPASIAL (Leaflet)
+    // PETA SPASIAL (Leaflet) - dasar bersama
     //
-    // Spreadsheet tidak memuat kolom lintang/bujur, jadi koordinat diambil dari
-    // tabel rujukan di koordinat.js berdasarkan nama wilayah. Wilayah yang tidak
-    // ada di tabel TIDAK ditaruh sembarangan di peta, melainkan dihitung sebagai
-    // "belum terpetakan" dan dilaporkan di bawah peta.
+    // Hanya menu Penerima Bantuan yang punya peta, karena hanya berkas survei
+    // di assets/geo yang memuat lintang/bujur asli. Menu Lokasi Terdampak dan
+    // Rencana Aksi sempat punya peta, tetapi titiknya terpaksa ditebak dari
+    // koordinat pusat wilayah - bukan posisi sebenarnya - sehingga dilepas.
     // =========================================================================
-
-    const petaState = { terdampak: null, aksi: null };
 
     const PETA_TENGAH = [2.5, 98.5];   // kira-kira tengah ketiga provinsi
     const PETA_ZOOM = 6;
@@ -1514,182 +1544,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const petaTersedia = () => typeof L !== 'undefined';
 
-    /** Buat peta sekali saja; pemanggilan berikutnya memakai instance yang ada. */
-    const siapkanPeta = (kunci, elId) => {
-        if (!petaTersedia()) return null;
-        if (petaState[kunci]) return petaState[kunci];
-
-        const el = document.getElementById(elId);
-        if (!el) return null;
-
-        // Leaflet menghitung berapa tile yang perlu diambil dari ukuran kontainer.
-        // Kalau peta dibuat saat halamannya masih display:none, ukurannya 0 dan
-        // Leaflet hanya mengambil satu tile - petanya tampak kosong. Jadi
-        // pembuatannya ditunda sampai kontainernya benar-benar punya ukuran.
-        if (!el.getBoundingClientRect().width) return null;
-
-        const map = L.map(el, { scrollWheelZoom: false }).setView(PETA_TENGAH, PETA_ZOOM);
-        pasangBasemap(map);
-
-        // Scroll halaman tidak boleh "tersangkut" zoom; zoom baru aktif setelah diklik.
-        map.on('click', () => map.scrollWheelZoom.enable());
-        map.on('mouseout', () => map.scrollWheelZoom.disable());
-
-        petaState[kunci] = { map, layer: L.layerGroup().addTo(map) };
-        return petaState[kunci];
-    };
-
-    /**
-     * Radius lingkaran dibuat sebanding dengan AKAR nilainya, bukan nilainya
-     * langsung - supaya luas lingkaran (yang dibaca mata) yang sebanding dengan
-     * nilai, bukan jari-jarinya. Kalau memakai nilai langsung, satu wilayah
-     * besar akan menenggelamkan semua yang lain.
-     */
-    const radiusDari = (nilai, maks) => {
-        if (!maks || nilai <= 0) return 6;
-        return 8 + Math.sqrt(nilai / maks) * 26;
-    };
-
-    const gambarTitik = (peta, titik, opsi) => {
-        peta.layer.clearLayers();
-        if (!titik.length) return;
-
-        const maks = Math.max(...titik.map(t => t.nilai));
-        const batas = [];
-
-        titik.forEach(t => {
-            const m = L.circleMarker([t.lat, t.lng], {
-                radius: radiusDari(t.nilai, maks),
-                color: '#1d4ed8',
-                weight: 1.5,
-                fillColor: '#2563eb',
-                fillOpacity: 0.45
-            }).addTo(peta.layer);
-
-            m.bindPopup(opsi.popup(t), { maxWidth: 300 });
-            m.bindTooltip(t.nama, { direction: 'top', offset: [0, -4] });
-            batas.push([t.lat, t.lng]);
-        });
-
-        if (batas.length) peta.map.fitBounds(batas, { padding: [40, 40], maxZoom: 9 });
-    };
-
-    /** Peta menu Lokasi Terdampak - agregat per provinsi. */
-    const renderPetaTerdampak = () => {
-        const peta = siapkanPeta('terdampak', 'map-terdampak');
-        if (!peta) return;
-
-        const rows = terdampakState.filtered;
-        const perProvinsi = {};
-        let belum = 0;
-
-        rows.forEach(r => {
-            const koord = cariKoordinatProvinsi(r.provinsi);
-            if (!koord) { belum++; return; }
-            const k = r.provinsi;
-            if (!perProvinsi[k]) {
-                perProvinsi[k] = { nama: k, lat: koord.lat, lng: koord.lng, nilai: 0, rincian: [] };
-            }
-            perProvinsi[k].nilai += r.jumlah;
-            perProvinsi[k].rincian.push(r);
-        });
-
-        const titik = Object.values(perProvinsi);
-        gambarTitik(peta, titik, {
-            popup: (t) => {
-                const perSatuan = {};
-                t.rincian.forEach(r => {
-                    const s = r.satuan || 'Tanpa satuan';
-                    perSatuan[s] = (perSatuan[s] || 0) + r.jumlah;
-                });
-                const baris = Object.entries(perSatuan)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([s, v]) => `<li>${formatAngka(v)} ${esc(s)}</li>`).join('');
-                return `<strong>${esc(t.nama)}</strong>
-                    <ul class="map-popup-list">${baris}</ul>
-                    <span class="map-popup-foot">${t.rincian.length} baris data</span>`;
-            }
-        });
-
-        setText('td-peta-info', `${titik.length} provinsi`);
-        const note = document.getElementById('td-peta-note');
-        if (note) {
-            note.textContent = belum
-                ? `${belum} baris belum terpetakan karena nama provinsinya tidak dikenali.`
-                : 'Sheet Lokasi Terdampak belum mengisi kolom Kabupaten/Kota, sehingga peta baru dapat menampilkan agregat tingkat provinsi.';
-        }
-    };
-
-    /** Peta menu Rencana Aksi - agregat per kabupaten/kota. */
-    const renderPetaAksi = () => {
-        const peta = siapkanPeta('aksi', 'map-aksi');
-        if (!peta) return;
-
-        const rows = aksiState.filtered;
-        const perWilayah = {};
-        const belum = new Set();
-
-        rows.forEach(r => {
-            // Anggaran satu baris dibagi rata ke seluruh wilayah yang disebut,
-            // supaya totalnya tidak menggelembung saat dijumlahkan antar titik.
-            const wilayah = [];
-            pecahLokasi(r.lokasi).forEach(n => pecahNamaGanda(n).forEach(x => wilayah.push(x)));
-            if (!wilayah.length) return;
-
-            const porsi = r.totalAnggaran / wilayah.length;
-            wilayah.forEach(nama => {
-                const koord = cariKoordinat(nama);
-                if (!koord) { belum.add(nama); return; }
-                const k = `${koord.lat},${koord.lng}`;
-                if (!perWilayah[k]) {
-                    perWilayah[k] = {
-                        nama: nama.replace(/^\s*\d+[.)]?\s*/, ''),
-                        lat: koord.lat, lng: koord.lng,
-                        provinsi: koord.provinsi, nilai: 0, kegiatan: new Set()
-                    };
-                }
-                perWilayah[k].nilai += porsi;
-                perWilayah[k].kegiatan.add(r.kegiatan);
-            });
-        });
-
-        const titik = Object.values(perWilayah);
-        gambarTitik(peta, titik, {
-            popup: (t) => {
-                const daftar = [...t.kegiatan].slice(0, 5)
-                    .map(k => `<li>${esc(k)}</li>`).join('');
-                const sisa = t.kegiatan.size > 5 ? `<span class="map-popup-foot">+${t.kegiatan.size - 5} kegiatan lain</span>` : '';
-                return `<strong>${esc(t.nama)}</strong>
-                    <span class="map-popup-sub">${esc(t.provinsi || '')}</span>
-                    <span class="map-popup-nilai">${formatRupiah(t.nilai)}</span>
-                    <ul class="map-popup-list">${daftar}</ul>${sisa}`;
-            }
-        });
-
-        setText('ra-peta-info', `${titik.length} kab/kota`);
-        const note = document.getElementById('ra-peta-note');
-        if (note) {
-            note.textContent = belum.size
-                ? `Anggaran tiap baris dibagi rata ke seluruh kab/kota yang disebut. ${belum.size} nama belum terpetakan: ${[...belum].join(', ')}.`
-                : 'Anggaran tiap baris dibagi rata ke seluruh kab/kota yang disebut pada baris tersebut.';
-        }
-    };
-
     /**
      * Leaflet menghitung ukuran peta saat dibuat. Karena halaman awalnya
-     * display:none, ukurannya 0 dan peta tampil abu-abu sampai diberi tahu
-     * untuk mengukur ulang - sama seperti kasus canvas Chart.js.
+     * display:none, ukurannya 0 dan peta tampil kosong sampai diberi tahu untuk
+     * mengukur ulang - sama seperti kasus canvas Chart.js.
      */
     const resizePeta = (pageEl, nama) => {
-        if (!pageEl || !petaTersedia()) return;
-
-        // Bangun peta yang tertunda karena halamannya belum terlihat.
-        if (nama === 'terdampak' && !petaState.terdampak) renderPetaTerdampak();
-        if (nama === 'aksi' && !petaState.aksi) renderPetaAksi();
-
-        Object.values(petaState).forEach(p => {
-            if (p && p.map && pageEl.contains(p.map.getContainer())) p.map.invalidateSize();
-        });
+        if (!pageEl || !petaTersedia() || nama !== 'penerima') return;
+        if (!penerimaState.peta) renderPetaPenerima();
+        else penerimaState.peta.invalidateSize();
     };
 
     // =========================================================================
@@ -1770,6 +1633,379 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </li>`).join('');
         gambarIkon();
+    };
+
+    // =========================================================================
+    // MENU PENERIMA BANTUAN
+    //
+    // Berbeda dari menu lain, sumbernya BUKAN spreadsheet melainkan berkas
+    // statis assets/geo/penerima.json - hasil gabungan tiga berkas survei di
+    // assets/geo (CSV Aceh + GeoJSON Sumbar & Sumut) yang dibangun oleh
+    // tools/build-penerima.py. Jalankan skrip itu lagi bila datanya diperbarui.
+    //
+    // Isinya belasan ribu titik, jadi berkasnya dipadatkan dengan encoding
+    // kamus: tiap kolom teks disimpan sekali lalu barisnya menyimpan indeks.
+    // =========================================================================
+
+    const SUMBER_PENERIMA = 'assets/geo/penerima.json';
+
+    const penerimaState = {
+        semua: [],
+        tersaring: [],
+        filters: { prov: '', kab: '', kerusakan: '', status: '', search: '' },
+        peta: null,
+        cluster: null,
+        charts: { kerusakan: null, kab: null },
+        dimuat: false
+    };
+
+    /** Bongkar format kamus menjadi array objek biasa. */
+    const bongkarPenerima = (paket) => {
+        if (!paket || !Array.isArray(paket.data)) return [];
+        const kolom = paket.kolom || [];
+        const kamus = paket.kamus || {};
+
+        return paket.data.map((baris, i) => {
+            const o = { id: i };
+            kolom.forEach((k, idx) => {
+                const kode = baris[idx];
+                o[k] = kode === -1 || kode === undefined ? '' : (kamus[k] || [])[kode] || '';
+            });
+            o.lat = baris[kolom.length];
+            o.lng = baris[kolom.length + 1];
+            return o;
+        });
+    };
+
+    const muatPenerima = async () => {
+        try {
+            const res = await fetch(SUMBER_PENERIMA, { cache: 'no-cache' });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            penerimaState.semua = bongkarPenerima(await res.json());
+        } catch (err) {
+            // Berkasnya statis; kalau gagal, menunya cukup disembunyikan.
+            console.warn('[Penerima] Gagal memuat ' + SUMBER_PENERIMA, err);
+            penerimaState.semua = [];
+        }
+        penerimaState.dimuat = true;
+    };
+
+    // ---------------------------------------------------------------- filter
+
+    const terapkanFilterPenerima = () => {
+        const f = penerimaState.filters;
+        penerimaState.tersaring = penerimaState.semua.filter(d => {
+            if (f.prov && d.prov !== f.prov) return false;
+            if (f.kab && d.kab !== f.kab) return false;
+            if (f.kerusakan && d.kerusakan !== f.kerusakan) return false;
+            if (f.status && d.status !== f.status) return false;
+            if (f.search) {
+                const teks = [d.nama, d.desa, d.kec, d.kab, d.jenis, d.fasilitas, d.alamat]
+                    .join(' ').toLowerCase();
+                if (!teks.includes(f.search)) return false;
+            }
+            return true;
+        });
+        renderPenerima();
+    };
+
+    // ------------------------------------------------------------ offcanvas
+
+    const BARIS_RINCIAN = [
+        ['Provinsi', 'prov'],
+        ['Kabupaten/Kota', 'kab'],
+        ['Kecamatan', 'kec'],
+        ['Desa/Kelurahan', 'desa'],
+        ['Alamat', 'alamat'],
+        ['Fasilitas Perikanan', 'fasilitas'],
+        ['Jenis Sarana/Prasarana', 'jenis'],
+        ['Tingkat Kewenangan', 'wewenang']
+    ];
+
+    const kelasKerusakan = (v) => {
+        const s = (v || '').toLowerCase();
+        if (s === 'berat') return 'badge-danger';
+        if (s === 'sedang') return 'badge-warning';
+        if (s === 'ringan') return 'badge-success';
+        return 'badge-neutral';
+    };
+
+    const tutupOffcanvas = () => {
+        const oc = document.getElementById('pn-offcanvas');
+        const bd = document.getElementById('pn-backdrop');
+        if (oc) { oc.classList.remove('is-open'); oc.hidden = true; }
+        if (bd) bd.hidden = true;
+    };
+
+    const bukaOffcanvas = (d) => {
+        const oc = document.getElementById('pn-offcanvas');
+        const bd = document.getElementById('pn-backdrop');
+        const body = document.getElementById('pn-oc-body');
+        if (!oc || !body) return;
+
+        setText('pn-oc-nama', d.nama || 'Tanpa nama');
+
+        const jumlah = [d.jumlah, d.satuan].filter(Boolean).join(' ');
+        const rincian = BARIS_RINCIAN
+            .filter(([, k]) => d[k])
+            .map(([label, k]) => `<div class="oc-row">
+                    <dt>${esc(label)}</dt>
+                    <dd>${esc(d[k])}</dd>
+                </div>`).join('');
+
+        body.innerHTML = `
+            <div class="oc-badges">
+                ${d.kerusakan ? `<span class="badge ${kelasKerusakan(d.kerusakan)}">Kerusakan ${esc(d.kerusakan)}</span>` : ''}
+                ${d.status ? `<span class="badge ${/belum/i.test(d.status) ? 'badge-warning' : 'badge-success'}">${esc(d.status)}</span>` : ''}
+            </div>
+
+            ${jumlah ? `<div class="oc-highlight">
+                <span class="oc-highlight-label">Kerusakan tercatat</span>
+                <span class="oc-highlight-value">${esc(jumlah)}</span>
+            </div>` : ''}
+
+            <dl class="oc-list">${rincian}</dl>
+
+            <div class="oc-foot">
+                <span class="oc-coord">
+                    <i data-lucide="map-pin" class="icon"></i>${d.lat.toFixed(5)}, ${d.lng.toFixed(5)}
+                </span>
+                ${d.foto ? `<a class="btn btn-ghost" href="${esc(d.foto)}" target="_blank" rel="noopener noreferrer">
+                    <i data-lucide="image" class="icon"></i>Foto pascabencana
+                </a>` : ''}
+            </div>`;
+
+        oc.hidden = false;
+        if (bd) bd.hidden = false;
+        // Paksa perhitungan layout agar transisinya berjalan, bukan langsung jadi.
+        void oc.offsetWidth;
+        oc.classList.add('is-open');
+
+        if (window.lucide) lucide.createIcons({ nameAttr: 'data-lucide' });
+    };
+
+    // ----------------------------------------------------------------- peta
+
+    const warnaKerusakan = (v) => {
+        const s = (v || '').toLowerCase();
+        if (s === 'berat') return '#dc2626';
+        if (s === 'sedang') return '#ea580c';
+        if (s === 'ringan') return '#16a34a';
+        return '#64748b';
+    };
+
+    const renderPetaPenerima = () => {
+        if (!petaTersedia()) return;
+
+        const el = document.getElementById('map-penerima');
+        if (!el || !el.getBoundingClientRect().width) return;
+
+        if (!penerimaState.peta) {
+            const map = L.map(el, { scrollWheelZoom: false }).setView(PETA_TENGAH, PETA_ZOOM);
+            pasangBasemap(map);
+            map.on('click', () => map.scrollWheelZoom.enable());
+            map.on('mouseout', () => map.scrollWheelZoom.disable());
+
+            // Belasan ribu penanda tidak bisa digambar satu per satu tanpa
+            // membuat peta macet; markercluster menggabungkannya per zoom.
+            const cluster = L.markerClusterGroup({
+                chunkedLoading: true,
+                maxClusterRadius: 55,
+                // Lepas gabungan cukup dini supaya titik bisa segera diklik
+                // tanpa pengguna harus memperbesar peta berkali-kali.
+                disableClusteringAtZoom: 14,
+                // Banyak baris berbagi koordinat yang sama persis (satu orang,
+                // beberapa jenis bantuan); ini yang memisahkannya jadi kipas.
+                spiderfyOnMaxZoom: true
+            });
+            map.addLayer(cluster);
+            penerimaState.peta = map;
+            penerimaState.cluster = cluster;
+        }
+
+        const { cluster, peta } = { cluster: penerimaState.cluster, peta: penerimaState.peta };
+        cluster.clearLayers();
+
+        const titik = penerimaState.tersaring;
+        const penanda = titik.map(d => {
+            const m = L.circleMarker([d.lat, d.lng], {
+                radius: 6,
+                color: '#ffffff',
+                weight: 1.5,
+                fillColor: warnaKerusakan(d.kerusakan),
+                fillOpacity: 0.9
+            });
+            m.bindTooltip(d.nama || d.desa || '(tanpa nama)', { direction: 'top', offset: [0, -4] });
+            m.on('click', () => bukaOffcanvas(d));
+            return m;
+        });
+
+        cluster.addLayers(penanda);
+
+        if (titik.length) {
+            const b = L.latLngBounds(titik.map(d => [d.lat, d.lng]));
+            peta.fitBounds(b, { padding: [40, 40], maxZoom: 14 });
+        }
+
+        setText('pn-peta-info', `${formatAngka(titik.length)} titik`);
+    };
+
+    // --------------------------------------------------------------- grafik
+
+    const renderGrafikPenerima = () => {
+        const rows = penerimaState.tersaring;
+
+        // 1. Tingkat kerusakan - warnanya mengikuti makna status, bukan variasi
+        const urutan = ['Berat', 'Sedang', 'Ringan'];
+        const hitung = {};
+        rows.forEach(d => {
+            const k = urutan.includes(d.kerusakan) ? d.kerusakan : 'Lainnya';
+            hitung[k] = (hitung[k] || 0) + 1;
+        });
+        const labelK = [...urutan, 'Lainnya'].filter(k => hitung[k]);
+        const cv1 = document.getElementById('chart-pn-kerusakan');
+
+        if (cv1) {
+            const data = {
+                labels: labelK,
+                datasets: [{
+                    data: labelK.map(k => hitung[k]),
+                    backgroundColor: labelK.map(k => warnaKerusakan(k)),
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            };
+            if (penerimaState.charts.kerusakan) {
+                penerimaState.charts.kerusakan.data = data;
+                penerimaState.charts.kerusakan.update();
+            } else {
+                penerimaState.charts.kerusakan = new Chart(cv1.getContext('2d'), {
+                    type: 'doughnut',
+                    data,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '62%',
+                        plugins: {
+                            legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, padding: 12 } },
+                            tooltip: {
+                                callbacks: {
+                                    label: (c) => {
+                                        const tot = c.dataset.data.reduce((a, b) => a + b, 0);
+                                        const pct = tot ? ((c.raw / tot) * 100).toFixed(1) : '0.0';
+                                        return ` ${formatAngka(c.raw)} titik (${pct}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // 2. Sepuluh kab/kota dengan titik terbanyak
+        const perKab = {};
+        rows.forEach(d => { if (d.kab) perKab[d.kab] = (perKab[d.kab] || 0) + 1; });
+        const top = Object.entries(perKab).sort((a, b) => b[1] - a[1]).slice(0, 10);
+        const cv2 = document.getElementById('chart-pn-kab');
+
+        if (cv2) {
+            const data = {
+                labels: top.map(t => t[0]),
+                datasets: [{ label: 'Titik terdata', data: top.map(t => t[1]),
+                             backgroundColor: colors.primary, borderRadius: 4 }]
+            };
+            if (penerimaState.charts.kab) {
+                penerimaState.charts.kab.data = data;
+                penerimaState.charts.kab.update();
+            } else {
+                penerimaState.charts.kab = new Chart(cv2.getContext('2d'), {
+                    type: 'bar',
+                    data,
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { callbacks: { label: (c) => ` ${formatAngka(c.raw)} titik` } }
+                        },
+                        scales: { x: { beginAtZero: true } }
+                    }
+                });
+            }
+        }
+    };
+
+    // ------------------------------------------------------------- ringkasan
+
+    const renderPenerima = () => {
+        const rows = penerimaState.tersaring;
+        const penerima = new Set(rows.map(d => d.nama).filter(Boolean));
+        const berat = rows.filter(d => (d.kerusakan || '').toLowerCase() === 'berat').length;
+        const belum = rows.filter(d => /belum/i.test(d.status || '')).length;
+
+        setText('pn-stat-titik', formatAngka(rows.length));
+        setText('pn-stat-penerima', formatAngka(penerima.size));
+        setText('pn-stat-berat', formatAngka(berat));
+        setText('pn-stat-belum', formatAngka(belum));
+
+        renderPetaPenerima();
+        renderGrafikPenerima();
+    };
+
+    const setupPenerima = () => {
+        const uniq = (k) => [...new Set(penerimaState.semua.map(d => d[k]).filter(Boolean))].sort();
+        populateSelect('pn-filter-provinsi', uniq('prov'), 'Semua Provinsi');
+        populateSelect('pn-filter-kab', uniq('kab'), 'Semua Kab/Kota');
+        populateSelect('pn-filter-kerusakan', uniq('kerusakan'), 'Semua Tingkat');
+        populateSelect('pn-filter-status', uniq('status'), 'Semua Status');
+
+        const bind = (id, key) => document.getElementById(id)?.addEventListener('change', (e) => {
+            penerimaState.filters[key] = e.target.value;
+            // Pilihan kab/kota dipersempit mengikuti provinsi yang dipilih.
+            if (key === 'prov') {
+                const daftar = [...new Set(penerimaState.semua
+                    .filter(d => !e.target.value || d.prov === e.target.value)
+                    .map(d => d.kab).filter(Boolean))].sort();
+                populateSelect('pn-filter-kab', daftar, 'Semua Kab/Kota');
+                penerimaState.filters.kab = '';
+            }
+            terapkanFilterPenerima();
+        });
+        bind('pn-filter-provinsi', 'prov');
+        bind('pn-filter-kab', 'kab');
+        bind('pn-filter-kerusakan', 'kerusakan');
+        bind('pn-filter-status', 'status');
+
+        document.getElementById('pn-search')?.addEventListener('input', (e) => {
+            penerimaState.filters.search = e.target.value.toLowerCase();
+            terapkanFilterPenerima();
+        });
+
+        document.getElementById('pn-btn-reset')?.addEventListener('click', () => {
+            ['pn-filter-provinsi', 'pn-filter-kab', 'pn-filter-kerusakan', 'pn-filter-status', 'pn-search']
+                .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            penerimaState.filters = { prov: '', kab: '', kerusakan: '', status: '', search: '' };
+            populateSelect('pn-filter-kab', uniq('kab'), 'Semua Kab/Kota');
+            terapkanFilterPenerima();
+        });
+
+        // Penutup offcanvas
+        document.getElementById('pn-oc-close')?.addEventListener('click', tutupOffcanvas);
+        document.getElementById('pn-backdrop')?.addEventListener('click', tutupOffcanvas);
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') tutupOffcanvas();
+        });
+
+        const note = document.getElementById('pn-peta-note');
+        if (note) {
+            note.textContent = 'Sumber: berkas survei di assets/geo (CSV Aceh, GeoJSON Sumatera Barat & Sumatera Utara), '
+                + 'bukan Google Spreadsheet. Warna titik menunjukkan tingkat kerusakan; titik yang berdekatan '
+                + 'digabung menjadi satu lingkaran berangka dan terpisah saat peta diperbesar.';
+        }
+
+        terapkanFilterPenerima();
     };
 
     // =========================================================================
@@ -1889,6 +2125,8 @@ document.addEventListener('DOMContentLoaded', () => {
         setupAksi();
         setupProgres();
         setupBerita();
+        await muatPenerima();
+        setupPenerima();
         renderAnggaran();
         setupRealisasi();
         renderRealisasi();
@@ -1897,6 +2135,12 @@ document.addEventListener('DOMContentLoaded', () => {
         syncMenuVisibility();
         gambarIkon();
     };
+
+    // Diisi di sini karena fungsi-fungsinya baru terdefinisi setelah modul menu.
+    RENDER_HALAMAN.terdampak = renderTerdampak;
+    RENDER_HALAMAN.aksi = renderAksi;
+    RENDER_HALAMAN.anggaran = () => { renderAnggaran(); renderRealisasi(); };
+    RENDER_HALAMAN.penerima = renderPenerima;
 
     setupNav();
     boot();

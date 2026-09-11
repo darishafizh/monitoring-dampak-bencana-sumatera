@@ -3,3 +3,9 @@
 
 # Arsip/salinan spreadsheet - sumber data sebenarnya ada di Google Spreadsheet
 *.xlsx
+
+# Berkas survei mentah (~6 MB) - yang dipakai dashboard adalah hasil olahannya,
+# assets/geo/penerima.json, yang dibangun oleh tools/build-penerima.py
+assets/geo/*.csv
+assets/geo/*.geojson
+assets/geo/*.qmd

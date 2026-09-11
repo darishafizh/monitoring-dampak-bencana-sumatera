@@ -1155,3 +1155,180 @@ th.num, td.num {
         height: 320px;
     }
 }
+
+/* ==========================================================================
+   Panel rincian (offcanvas) - dibuka dari penanda peta penerima bantuan
+   ========================================================================== */
+
+.map-box--tall {
+    height: 560px;
+}
+
+.offcanvas-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    background-color: rgb(15 23 42 / 0.35);
+}
+
+.offcanvas {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 910;
+    width: min(420px, 100vw);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--surface);
+    border-left: 1px solid var(--border);
+    box-shadow: -8px 0 28px -8px rgb(15 23 42 / 0.18);
+    /* Mulai dari luar layar; kelas .is-open yang menggesernya masuk. */
+    transform: translateX(100%);
+    transition: transform 0.22s ease;
+}
+
+.offcanvas.is-open {
+    transform: translateX(0);
+}
+
+.offcanvas-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-5);
+    border-bottom: 1px solid var(--border);
+}
+
+.offcanvas-eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-light);
+    margin-bottom: 2px;
+}
+
+.offcanvas-head h3 {
+    font-size: 1.0625rem;
+    line-height: 1.3;
+}
+
+.offcanvas-close {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background-color: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.offcanvas-close:hover {
+    border-color: var(--border-strong);
+    color: var(--text);
+}
+
+.offcanvas-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.oc-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.oc-highlight {
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    background-color: var(--primary-soft);
+}
+
+.oc-highlight-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.oc-highlight-value {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--primary-darker);
+}
+
+.oc-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.oc-row {
+    display: grid;
+    grid-template-columns: 128px minmax(0, 1fr);
+    gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.oc-row:last-child {
+    border-bottom: none;
+}
+
+.oc-row dt {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.oc-row dd {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text);
+    overflow-wrap: anywhere;
+}
+
+.oc-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--border);
+}
+
+.oc-coord {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+}
+
+.oc-coord .icon {
+    width: 14px;
+    height: 14px;
+}
+
+@media (max-width: 640px) {
+    .map-box--tall {
+        height: 420px;
+    }
+
+    .oc-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 2px;
+    }
+}

@@ -11,9 +11,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Leaflet untuk peta spasial -->
+    <!-- Leaflet untuk peta spasial + markercluster untuk belasan ribu titik -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
     <!-- Chart.js untuk grafik, Lucide untuk ikon garis (bukan emoji) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -27,7 +30,7 @@
     <header class="topbar">
         <div class="topbar-inner">
             <a class="brand" href="#terdampak">
-                <img src="logo-kkp.png" alt="Logo Kementerian Kelautan dan Perikanan">
+                <img src="logo-kkp.png" width="34" height="34" alt="Logo Kementerian Kelautan dan Perikanan">
                 <span>
                     <span class="brand-name">Rehabilitasi Sumatera</span>
                     <span class="brand-sub">Kementerian Kelautan dan Perikanan</span>
@@ -53,6 +56,9 @@
                 </button>
                 <button class="nav-link" data-page="dokumentasi">
                     <i data-lucide="images" class="icon"></i>Dokumentasi
+                </button>
+                <button class="nav-link" data-page="penerima">
+                    <i data-lucide="hand-heart" class="icon"></i>Penerima Bantuan
                 </button>
                 <button class="nav-link" data-page="berita">
                     <i data-lucide="newspaper" class="icon"></i>Berita
@@ -134,18 +140,6 @@
                         <p class="stat-value" id="td-stat-kabkota">0</p>
                     </div>
                 </div>
-            </section>
-
-            <section class="panel">
-                <div class="panel-head">
-                    <div>
-                        <h3>Peta Sebaran Dampak</h3>
-                        <p>Ukuran lingkaran sebanding dengan jumlah terdampak; klik untuk rincian per kategori</p>
-                    </div>
-                    <span class="badge badge-neutral" id="td-peta-info">&mdash;</span>
-                </div>
-                <div class="map-box" id="map-terdampak"></div>
-                <p class="panel-note" id="td-peta-note"></p>
             </section>
 
             <section class="grid-2">
@@ -254,18 +248,6 @@
                         <p class="stat-value" id="ra-stat-kabkota">0</p>
                     </div>
                 </div>
-            </section>
-
-            <section class="panel">
-                <div class="panel-head">
-                    <div>
-                        <h3>Peta Sebaran Rencana Aksi</h3>
-                        <p>Ukuran lingkaran sebanding dengan anggaran per kabupaten/kota; klik untuk rincian kegiatan</p>
-                    </div>
-                    <span class="badge badge-neutral" id="ra-peta-info">&mdash;</span>
-                </div>
-                <div class="map-box" id="map-aksi"></div>
-                <p class="panel-note" id="ra-peta-note"></p>
             </section>
 
             <section class="grid-2">
@@ -560,6 +542,102 @@
         </main>
 
         <!-- ============================================================= -->
+        <!-- MENU 6: PENERIMA BANTUAN   <- assets/geo (bukan spreadsheet)  -->
+        <!-- ============================================================= -->
+        <main class="page" id="page-penerima">
+
+            <section class="card toolbar">
+                <div class="field">
+                    <label for="pn-filter-provinsi">Provinsi</label>
+                    <select id="pn-filter-provinsi"><option value="">Semua Provinsi</option></select>
+                </div>
+                <div class="field">
+                    <label for="pn-filter-kab">Kabupaten/Kota</label>
+                    <select id="pn-filter-kab"><option value="">Semua Kab/Kota</option></select>
+                </div>
+                <div class="field">
+                    <label for="pn-filter-kerusakan">Tingkat Kerusakan</label>
+                    <select id="pn-filter-kerusakan"><option value="">Semua Tingkat</option></select>
+                </div>
+                <div class="field">
+                    <label for="pn-filter-status">Status Penanganan</label>
+                    <select id="pn-filter-status"><option value="">Semua Status</option></select>
+                </div>
+                <div class="search-field">
+                    <i data-lucide="search" class="icon"></i>
+                    <input type="text" id="pn-search" placeholder="Cari nama, desa, atau jenis bantuan...">
+                </div>
+                <button id="pn-btn-reset" class="btn btn-ghost">
+                    <i data-lucide="rotate-ccw" class="icon"></i>Reset
+                </button>
+            </section>
+
+            <section class="stats">
+                <div class="stat">
+                    <div class="stat-icon"><i data-lucide="map-pin" class="icon"></i></div>
+                    <div class="stat-body">
+                        <p class="stat-label">Titik Terdata</p>
+                        <p class="stat-value" id="pn-stat-titik">0</p>
+                    </div>
+                </div>
+                <div class="stat">
+                    <div class="stat-icon is-neutral"><i data-lucide="users" class="icon"></i></div>
+                    <div class="stat-body">
+                        <p class="stat-label">Penerima</p>
+                        <p class="stat-value" id="pn-stat-penerima">0</p>
+                    </div>
+                </div>
+                <div class="stat">
+                    <div class="stat-icon is-danger"><i data-lucide="triangle-alert" class="icon"></i></div>
+                    <div class="stat-body">
+                        <p class="stat-label">Kerusakan Berat</p>
+                        <p class="stat-value" id="pn-stat-berat">0</p>
+                    </div>
+                </div>
+                <div class="stat">
+                    <div class="stat-icon is-warning"><i data-lucide="clock" class="icon"></i></div>
+                    <div class="stat-body">
+                        <p class="stat-label">Belum Ditangani</p>
+                        <p class="stat-value" id="pn-stat-belum">0</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h3>Peta Sebaran Penerima Bantuan</h3>
+                        <p>Klik satu titik untuk membuka rincian datanya di panel samping</p>
+                    </div>
+                    <span class="badge badge-neutral" id="pn-peta-info">&mdash;</span>
+                </div>
+                <div class="map-box map-box--tall" id="map-penerima"></div>
+                <p class="panel-note" id="pn-peta-note"></p>
+            </section>
+
+            <section class="grid-2">
+                <div class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Tingkat Kerusakan</h3>
+                            <p>Komposisi titik menurut tingkat kerusakannya</p>
+                        </div>
+                    </div>
+                    <div class="chart-box"><canvas id="chart-pn-kerusakan"></canvas></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Sebaran per Kabupaten/Kota</h3>
+                            <p>Sepuluh wilayah dengan titik terdata terbanyak</p>
+                        </div>
+                    </div>
+                    <div class="chart-box"><canvas id="chart-pn-kab"></canvas></div>
+                </div>
+            </section>
+        </main>
+
+        <!-- ============================================================= -->
         <!-- MENU 6: BERITA   <- sheet 'Berita'                            -->
         <!-- ============================================================= -->
         <main class="page" id="page-berita">
@@ -591,6 +669,21 @@
         </main>
     </div>
 
+    <!-- Panel rincian penerima (offcanvas), dibuka dari penanda peta -->
+    <div class="offcanvas-backdrop" id="pn-backdrop" hidden></div>
+    <aside class="offcanvas" id="pn-offcanvas" hidden aria-labelledby="pn-oc-nama" role="dialog" aria-modal="true">
+        <header class="offcanvas-head">
+            <div>
+                <p class="offcanvas-eyebrow">Rincian Penerima</p>
+                <h3 id="pn-oc-nama">&mdash;</h3>
+            </div>
+            <button class="offcanvas-close" id="pn-oc-close" aria-label="Tutup panel">
+                <i data-lucide="x" class="icon"></i>
+            </button>
+        </header>
+        <div class="offcanvas-body" id="pn-oc-body"></div>
+    </aside>
+
     <footer class="footer">
         <span>&copy; 2026 Kementerian Kelautan dan Perikanan</span>
         <span>Rencana Induk Rehabilitasi dan Rekonstruksi Pascabencana Sumatera 2026&ndash;2028</span>
@@ -598,7 +691,6 @@
 
     <!-- Konfigurasi, loader live spreadsheet, snapshot per-sheet, lalu logika aplikasi -->
     <script src="config.js"></script>
-    <script src="koordinat.js"></script>
     <script src="sheets.js"></script>
     <script src="data-snapshot.js"></script>
     <script src="script.js"></script>

@@ -38,8 +38,5 @@ const DASHBOARD_CONFIG = {
     },
 
     // Berapa lama hasil fetch di-cache di browser (menit). 0 = selalu ambil baru.
-    // Disetel 15 untuk produksi: menekan jumlah request ke Google agar tidak kena
-    // rate limit saat pengunjung ramai. Tombol "Muat ulang" tetap mengambil data
-    // terbaru seketika, jadi editor spreadsheet tidak perlu menunggu cache habis.
     CACHE_MINUTES: 15
 };
