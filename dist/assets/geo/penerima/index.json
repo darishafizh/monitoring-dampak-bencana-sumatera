@@ -1,0 +1,19 @@
+{
+  "provinsi": [
+    {
+      "provinsi": "Aceh",
+      "berkas": "aceh.json",
+      "jumlah": 11550
+    },
+    {
+      "provinsi": "Sumatera Barat",
+      "berkas": "sumatera-barat.json",
+      "jumlah": 1367
+    },
+    {
+      "provinsi": "Sumatera Utara",
+      "berkas": "sumatera-utara.json",
+      "jumlah": 1246
+    }
+  ]
+}

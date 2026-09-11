@@ -29,10 +29,10 @@ BERKAS = [
     'favicon.png',
 ]
 
-# Data penerima bantuan hasil tools/build-penerima.py
-ASET = [
-    ('assets/geo/penerima.json', 'assets/geo/penerima.json'),
-]
+# Data penerima bantuan hasil tools/build-penerima.py - satu berkas per
+# provinsi, plus index.json yang mendaftarnya. Seluruh isi foldernya disalin
+# agar penambahan provinsi baru tidak perlu menyentuh skrip ini.
+FOLDER_ASET = ['assets/geo/penerima']
 
 if os.path.isdir(DIST):
     shutil.rmtree(DIST)
@@ -44,14 +44,12 @@ for nama in BERKAS:
         raise SystemExit('Berkas wajib tidak ditemukan: ' + nama)
     shutil.copy2(asal, os.path.join(DIST, nama))
 
-for asal_rel, tujuan_rel in ASET:
-    asal = os.path.join(AKAR, asal_rel)
-    if not os.path.exists(asal):
-        print('  ! lewati (belum dibuat): ' + asal_rel)
+for rel in FOLDER_ASET:
+    asal = os.path.join(AKAR, rel)
+    if not os.path.isdir(asal):
+        print('  ! lewati (belum dibuat): ' + rel)
         continue
-    tujuan = os.path.join(DIST, tujuan_rel)
-    os.makedirs(os.path.dirname(tujuan), exist_ok=True)
-    shutil.copy2(asal, tujuan)
+    shutil.copytree(asal, os.path.join(DIST, rel))
 
 # Cache dinaikkan khusus untuk produksi: menekan jumlah permintaan ke Google
 # agar tidak kena rate limit saat pengunjung ramai. Tombol "Muat ulang" tetap

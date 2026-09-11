@@ -1,7 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Gabungkan data penerima bantuan dari assets/geo menjadi satu berkas ringkas
-yang siap dibaca dashboard: assets/geo/penerima.json
+Olah data penerima bantuan dari assets/geo menjadi berkas ringkas per provinsi
+yang siap dibaca dashboard:
+
+    assets/geo/penerima/index.json          daftar provinsi + nama berkasnya
+    assets/geo/penerima/aceh.json
+    assets/geo/penerima/sumatera-barat.json
+    assets/geo/penerima/sumatera-utara.json
+
+Dipisah per provinsi supaya berkasnya tetap wajar dibuka/diperiksa satu per satu
+dan provinsi baru cukup ditambahkan tanpa menyentuh berkas provinsi lain.
 
 Sumbernya tiga GeoJSON hasil ekspor QGIS dengan penamaan kolom berbeda:
   - Json_Aceh.geojson   nama kolom panjang & apa adanya ("Kabupaten/Kota")
@@ -21,7 +29,7 @@ import re
 from collections import Counter
 
 BASE = os.path.join(os.path.dirname(__file__), '..', 'assets', 'geo')
-KELUARAN = os.path.join(BASE, 'penerima.json')
+KELUARAN_DIR = os.path.join(BASE, 'penerima')
 
 # Kotak batas Sumatera bagian utara; dipakai memvalidasi dan memperbaiki koordinat.
 LAT_MIN, LAT_MAKS = -3.0, 6.5
@@ -235,33 +243,72 @@ for berkas in SUMBER:
 # hanya menyimpan nomor indeks. Ukurannya turun drastis tanpa kehilangan data.
 KOLOM = list(KANDIDAT.keys())
 
-kamus = {k: [] for k in KOLOM}
-indeks = {k: {} for k in KOLOM}
 
+def padatkan(baris_rec):
+    """Ubah daftar record jadi bentuk {kolom, kamus, data} yang ringkas."""
+    kamus = {k: [] for k in KOLOM}
+    indeks = {k: {} for k in KOLOM}
 
-def kode(kolom, nilai):
-    """Nomor indeks nilai pada kamus kolom; -1 untuk nilai kosong."""
-    if nilai == '':
-        return -1
-    peta = indeks[kolom]
-    if nilai not in peta:
-        peta[nilai] = len(kamus[kolom])
-        kamus[kolom].append(nilai)
-    return peta[nilai]
+    def kode(kolom, nilai):
+        """Nomor indeks nilai pada kamus kolom; -1 untuk nilai kosong."""
+        if nilai == '':
+            return -1
+        peta = indeks[kolom]
+        if nilai not in peta:
+            peta[nilai] = len(kamus[kolom])
+            kamus[kolom].append(nilai)
+        return peta[nilai]
 
-
-baris = [[kode(k, r.get(k, '')) for k in KOLOM] + [r['lat'], r['lng']] for r in hasil]
-
-with io.open(KELUARAN, 'w', encoding='utf-8') as f:
-    json.dump({
-        'jumlah': len(baris),
-        'kolom': KOLOM,          # urutan kolom pada tiap baris; dua terakhir lat, lng
+    data = [[kode(k, r.get(k, '')) for k in KOLOM] + [r['lat'], r['lng']]
+            for r in baris_rec]
+    return {
+        'jumlah': len(data),
+        'kolom': KOLOM,          # urutan kolom tiap baris; dua terakhir lat, lng
         'kamus': kamus,
-        'data': baris,
-    }, f, ensure_ascii=False, separators=(',', ':'))
+        'data': data,
+    }
 
-ukuran = os.path.getsize(KELUARAN) / 1024 / 1024
-print('penerima.json  : %d titik, %.2f MB' % (len(baris), ukuran))
+
+def slug(nama):
+    """'Sumatera Barat' -> 'sumatera-barat'"""
+    return re.sub(r'[^a-z0-9]+', '-', nama.lower()).strip('-')
+
+
+# Kelompokkan per provinsi, lalu tulis satu berkas untuk masing-masing.
+per_provinsi = {}
+for r in hasil:
+    per_provinsi.setdefault(r['prov'] or 'lainnya', []).append(r)
+
+if os.path.isdir(KELUARAN_DIR):
+    for f in os.listdir(KELUARAN_DIR):
+        if f.endswith('.json'):
+            os.remove(os.path.join(KELUARAN_DIR, f))
+else:
+    os.makedirs(KELUARAN_DIR)
+
+daftar = []
+for prov in sorted(per_provinsi):
+    rec = per_provinsi[prov]
+    berkas = slug(prov) + '.json'
+    with io.open(os.path.join(KELUARAN_DIR, berkas), 'w', encoding='utf-8') as f:
+        json.dump(padatkan(rec), f, ensure_ascii=False, separators=(',', ':'))
+    daftar.append({'provinsi': prov, 'berkas': berkas, 'jumlah': len(rec)})
+
+# Indeks dibaca dashboard lebih dulu, supaya menambah provinsi baru cukup
+# menaruh berkasnya di sini tanpa menyentuh kode web sama sekali.
+with io.open(os.path.join(KELUARAN_DIR, 'index.json'), 'w', encoding='utf-8') as f:
+    json.dump({'provinsi': daftar}, f, ensure_ascii=False, indent=2)
+
+total = 0
+print('assets/geo/penerima/')
+for d in daftar:
+    jalur = os.path.join(KELUARAN_DIR, d['berkas'])
+    ukuran = os.path.getsize(jalur)
+    total += ukuran
+    print('  %-24s %6d titik  %7.2f MB' % (d['berkas'], d['jumlah'], ukuran / 1024 / 1024))
+print('  %-24s %6d titik  %7.2f MB' % ('TOTAL', sum(d['jumlah'] for d in daftar),
+                                       total / 1024 / 1024))
+print()
 for k, v in sorted(statistik.items()):
     print('  %-32s %d' % (k, v))
 

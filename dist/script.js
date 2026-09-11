@@ -1639,15 +1639,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // MENU PENERIMA BANTUAN
     //
     // Berbeda dari menu lain, sumbernya BUKAN spreadsheet melainkan berkas
-    // statis assets/geo/penerima.json - hasil gabungan tiga GeoJSON survei di
-    // assets/geo (Aceh, Sumbar, Sumut) yang dibangun oleh
-    // tools/build-penerima.py. Jalankan skrip itu lagi bila datanya diperbarui.
+    // statis di assets/geo/penerima/ - satu berkas per provinsi, hasil olahan
+    // GeoJSON survei oleh tools/build-penerima.py. Jalankan skrip itu lagi
+    // bila berkas GeoJSON sumbernya diperbarui.
     //
     // Isinya belasan ribu titik, jadi berkasnya dipadatkan dengan encoding
     // kamus: tiap kolom teks disimpan sekali lalu barisnya menyimpan indeks.
     // =========================================================================
 
-    const SUMBER_PENERIMA = 'assets/geo/penerima.json';
+    const DIR_PENERIMA = 'assets/geo/penerima/';
 
     const penerimaState = {
         semua: [],
@@ -1656,7 +1656,8 @@ document.addEventListener('DOMContentLoaded', () => {
         peta: null,
         cluster: null,
         charts: { kerusakan: null, kab: null },
-        dimuat: false
+        dimuat: false,
+        gagal: []
     };
 
     /** Bongkar format kamus menjadi array objek biasa. */
@@ -1677,16 +1678,49 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    const ambilJson = async (jalur) => {
+        const res = await fetch(jalur, { cache: 'no-cache' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+    };
+
+    /**
+     * Baca indeks provinsi lalu ambil berkas-berkasnya paralel.
+     *
+     * Indeks dibaca lebih dulu supaya menambah provinsi baru cukup menaruh
+     * berkasnya di assets/geo/penerima/ dan mendaftarkannya di index.json -
+     * tanpa menyentuh kode ini sama sekali.
+     */
     const muatPenerima = async () => {
+        penerimaState.semua = [];
+        penerimaState.gagal = [];
+
+        let daftar = [];
         try {
-            const res = await fetch(SUMBER_PENERIMA, { cache: 'no-cache' });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            penerimaState.semua = bongkarPenerima(await res.json());
+            daftar = (await ambilJson(DIR_PENERIMA + 'index.json')).provinsi || [];
         } catch (err) {
-            // Berkasnya statis; kalau gagal, menunya cukup disembunyikan.
-            console.warn('[Penerima] Gagal memuat ' + SUMBER_PENERIMA, err);
-            penerimaState.semua = [];
+            // Berkasnya statis; kalau indeksnya tidak ada, menunya disembunyikan.
+            console.warn('[Penerima] Gagal memuat index.json', err);
+            penerimaState.dimuat = true;
+            return;
         }
+
+        // Satu provinsi yang gagal tidak boleh menggugurkan provinsi lain.
+        const hasil = await Promise.all(daftar.map(async (d) => {
+            try {
+                return bongkarPenerima(await ambilJson(DIR_PENERIMA + d.berkas));
+            } catch (err) {
+                console.warn(`[Penerima] Gagal memuat ${d.berkas}`, err);
+                penerimaState.gagal.push(d.provinsi || d.berkas);
+                return [];
+            }
+        }));
+
+        // id dibuat ulang lintas provinsi supaya tetap unik setelah digabung.
+        hasil.flat().forEach((d, i) => {
+            d.id = i;
+            penerimaState.semua.push(d);
+        });
         penerimaState.dimuat = true;
     };
 
@@ -2000,9 +2034,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const note = document.getElementById('pn-peta-note');
         if (note) {
-            note.textContent = 'Sumber: berkas GeoJSON survei di assets/geo (Aceh, Sumatera Barat, Sumatera Utara), '
-                + 'bukan Google Spreadsheet. Warna titik menunjukkan tingkat kerusakan; titik yang berdekatan '
-                + 'digabung menjadi satu lingkaran berangka dan terpisah saat peta diperbesar.';
+            const gagal = penerimaState.gagal.length
+                ? ` Data ${penerimaState.gagal.join(', ')} gagal dimuat sehingga belum tampil.`
+                : '';
+            note.textContent = 'Sumber: berkas GeoJSON survei, diolah jadi satu berkas per provinsi di '
+                + 'assets/geo/penerima/ - bukan Google Spreadsheet. Warna titik menunjukkan tingkat '
+                + 'kerusakan; titik yang berdekatan digabung menjadi satu lingkaran berangka dan '
+                + 'terpisah saat peta diperbesar.' + gagal;
         }
 
         terapkanFilterPenerima();
