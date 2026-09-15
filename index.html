@@ -309,14 +309,19 @@
         <!-- ============================================================= -->
         <main class="page" id="page-progres">
 
+            <!-- Pilihan ini menentukan pagu, realisasi, dan kegiatan yang ditampilkan -->
             <section class="card toolbar">
                 <div class="field">
-                    <label for="pg-filter-kabkota">Kab/Kota</label>
-                    <select id="pg-filter-kabkota"><option value="">Semua Kab/Kota</option></select>
+                    <label for="pg-filter-sumber">Sumber Dana</label>
+                    <select id="pg-filter-sumber">
+                        <option value="">Semua (ABT + Reguler)</option>
+                        <option value="ABT">ABT</option>
+                        <option value="Reguler">Reguler</option>
+                    </select>
                 </div>
-                <div class="search-field">
-                    <i data-lucide="search" class="icon"></i>
-                    <input type="text" id="pg-search" placeholder="Cari kegiatan, kab/kota, atau desa...">
+                <div class="field">
+                    <label for="pg-filter-eselon">Unit Eselon I</label>
+                    <select id="pg-filter-eselon"><option value="">Semua Unit</option></select>
                 </div>
                 <button id="pg-btn-reset" class="btn btn-ghost">
                     <i data-lucide="rotate-ccw" class="icon"></i>Reset
@@ -325,40 +330,62 @@
 
             <section class="stats">
                 <div class="stat">
-                    <div class="stat-icon"><i data-lucide="target" class="icon"></i></div>
+                    <div class="stat-icon"><i data-lucide="wallet" class="icon"></i></div>
                     <div class="stat-body">
-                        <p class="stat-label">Target Anggaran</p>
+                        <p class="stat-label">Pagu Anggaran</p>
                         <p class="stat-value" id="pg-stat-target">Rp 0</p>
                     </div>
                 </div>
                 <div class="stat">
                     <div class="stat-icon is-success"><i data-lucide="circle-check-big" class="icon"></i></div>
                     <div class="stat-body">
-                        <p class="stat-label">Realisasi Anggaran</p>
+                        <p class="stat-label">Terealisasi</p>
                         <p class="stat-value" id="pg-stat-realisasi">Rp 0</p>
                     </div>
                 </div>
                 <div class="stat">
                     <div class="stat-icon is-warning"><i data-lucide="percent" class="icon"></i></div>
                     <div class="stat-body">
-                        <p class="stat-label">Persentase Realisasi</p>
+                        <p class="stat-label">Serapan</p>
                         <p class="stat-value" id="pg-stat-persen">0%</p>
                     </div>
                 </div>
                 <div class="stat">
-                    <div class="stat-icon is-neutral"><i data-lucide="list-checks" class="icon"></i></div>
+                    <div class="stat-icon is-neutral"><i data-lucide="hourglass" class="icon"></i></div>
                     <div class="stat-body">
-                        <p class="stat-label">Jumlah Kegiatan</p>
-                        <p class="stat-value" id="pg-stat-kegiatan">0</p>
+                        <p class="stat-label">Sisa Anggaran</p>
+                        <p class="stat-value" id="pg-stat-sisa">Rp 0</p>
                     </div>
                 </div>
+            </section>
+
+            <!-- Anggaran -> progres: tiap unit menunjukkan berapa dari pagunya yang sudah terpakai -->
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h3>Penggunaan Anggaran per Unit Eselon I</h3>
+                        <p>Pagu dari sheet <strong>Anggaran</strong>, realisasi dari sheet <strong>Realisasi Anggaran</strong>, kegiatan dari sheet <strong>Progres</strong> &middot; klik satu unit untuk melihat kegiatannya</p>
+                    </div>
+                </div>
+                <div class="sinkron-list" id="pg-sinkron"></div>
             </section>
 
             <section class="panel">
                 <div class="panel-head">
                     <div>
-                        <h3>Progres Pelaksanaan</h3>
-                        <p>Sumber: sheet <strong>Progres</strong></p>
+                        <h3>Rincian Kegiatan</h3>
+                        <p>Sumber: sheet <strong>Progres</strong>, dikelompokkan per Unit Eselon I</p>
+                    </div>
+                    <span class="badge badge-neutral" id="pg-jumlah">0 kegiatan</span>
+                </div>
+                <div class="toolbar toolbar--inset">
+                    <div class="field">
+                        <label for="pg-filter-kabkota">Kab/Kota</label>
+                        <select id="pg-filter-kabkota"><option value="">Semua Kab/Kota</option></select>
+                    </div>
+                    <div class="search-field">
+                        <i data-lucide="search" class="icon"></i>
+                        <input type="text" id="pg-search" placeholder="Cari kegiatan, kab/kota, atau desa...">
                     </div>
                 </div>
                 <div class="table-wrap">
@@ -366,7 +393,6 @@
                         <thead>
                             <tr>
                                 <th>No</th>
-                                <th>Unit Eselon I</th>
                                 <th>Kab/Kota</th>
                                 <th>Kegiatan</th>
                                 <th>Desa</th>
@@ -385,7 +411,6 @@
                         <tbody id="pg-table-body"></tbody>
                     </table>
                 </div>
-                <div class="pagination" id="pg-pagination"></div>
             </section>
         </main>
 
@@ -415,8 +440,8 @@
             <section class="panel" id="ang-chart-wrap">
                 <div class="panel-head">
                     <div>
-                        <h3>Usulan Anggaran vs ABT per Unit Eselon I</h3>
-                        <p>Perbandingan usulan kebutuhan dengan anggaran belanja tambahan</p>
+                        <h3>Usulan, ABT, dan Realisasi per Unit Eselon I</h3>
+                        <p>Realisasi ABT dihitung sama persis dengan menu Progres</p>
                     </div>
                 </div>
                 <div class="chart-box"><canvas id="chart-anggaran"></canvas></div>

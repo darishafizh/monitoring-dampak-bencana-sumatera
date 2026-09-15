@@ -199,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const INFO_MENU = {
         terdampak:   ['Lokasi Terdampak', 'Sebaran pelaku usaha, sarana, dan lahan yang terdampak bencana'],
         aksi:        ['Rencana Aksi', 'Program dan alokasi anggaran pemulihan tahun 2026 - 2028'],
-        progres:     ['Progres Pelaksanaan', 'Capaian kegiatan pemulihan per kabupaten/kota'],
+        progres:     ['Progres Pelaksanaan', 'Penggunaan anggaran per Unit Eselon I beserta rincian kegiatannya'],
         anggaran:    ['Anggaran & Realisasi', 'Usulan, alokasi, dan serapan anggaran pemulihan'],
         dokumentasi: ['Dokumentasi', 'Perbandingan kondisi sebelum dan sesudah penanganan'],
         penerima:    ['Penerima Bantuan', 'Sebaran titik penerima bantuan hasil survei lapangan'],
@@ -947,6 +947,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 targetVolume: cleanCell(item.targetVolume),
                 targetSatuan: cleanCell(item.targetSatuan),
                 targetAnggaran,
+                // Sel berisi galat rumus (#REF!, #N/A) terbaca 0 oleh parseRupiah;
+                // ditandai supaya tidak tersamar sebagai target nol.
+                targetError: /#[A-Z]/.test(String(item.targetAnggaran ?? '')),
                 realisasiVolume: cleanCell(item.realisasiVolume),
                 realisasiSatuan: cleanCell(item.realisasiSatuan),
                 realisasiAnggaran,
@@ -962,108 +965,293 @@ document.addEventListener('DOMContentLoaded', () => {
         .filter(item => item.kegiatan || item.kabKota);
 
     const progresState = {
-        filtered: [],
-        page: 1,
-        perPage: 15,
-        filters: { kabKota: '', search: '' }
+        filters: { sumber: '', eselon: '', kabKota: '', search: '' }
     };
 
-    const renderProgresSummary = () => {
-        const rows = progresState.filtered;
-        const target = rows.reduce((s, r) => s + r.targetAnggaran, 0);
-        const realisasi = rows.reduce((s, r) => s + r.realisasiAnggaran, 0);
-        const persen = target > 0 ? (realisasi / target) * 100 : 0;
+    /**
+     * Pemetaan kelompok kegiatan (sheet Realisasi Anggaran) ke Unit Eselon I
+     * (sheet Anggaran & Progres). Ketiga sheet tidak punya kolom penghubung,
+     * jadi pemetaan ditetapkan dari nama kelompoknya - dan terbukti benar:
+     * target ABT tiap kelompok sama persis dengan pagu ABT Eselon I pasangannya
+     * di sheet Anggaran (DJPB 52.831.957.000, DJPT 11.423.896.000,
+     * DJPK 40.737.000.000, DJPDS 8.883.860.000). Bila suatu saat tidak sama
+     * lagi, kartu unitnya memberi tahu.
+     */
+    const PETA_ESELON = [
+        { eselon: 'DJPB',  pola: /budi\s*daya/i },
+        { eselon: 'DJPT',  pola: /tangkap/i },
+        { eselon: 'DJPK',  pola: /garam/i },
+        { eselon: 'DJPDS', pola: /pengolahan|pemasaran/i }
+    ];
 
-        setText('pg-stat-target', target ? formatRupiah(target) : 'Rp 0');
-        setText('pg-stat-realisasi', realisasi ? formatRupiah(realisasi) : 'Rp 0');
-        setText('pg-stat-persen', `${persen.toFixed(1)}%`);
-        setText('pg-stat-kegiatan', rows.length);
+    /** 'ABT' | 'Reguler' | 'Reguler (UPT)' -> 'ABT' | 'Reguler' | '' */
+    const sumberDana = (ket) => /^\s*abt/i.test(ket || '') ? 'ABT'
+        : /^\s*reguler/i.test(ket || '') ? 'Reguler' : '';
+
+    /**
+     * Satukan pagu, realisasi, dan rincian kegiatan per Unit Eselon I untuk
+     * satu sumber dana ('' = ABT + Reguler).
+     *
+     *   pagu ABT      : sheet Anggaran (pagu resmi)
+     *   pagu Reguler  : sheet Realisasi Anggaran blok Reguler - sheet Anggaran
+     *                   tidak memuat pagu Reguler
+     *   realisasi     : sheet Realisasi Anggaran, blok sesuai sumber dana
+     *   kegiatan      : sheet Progres, baris unit + sumber dana tersebut
+     *
+     * Dipakai menu Progres DAN grafik menu Anggaran, supaya angka pagu dan
+     * realisasi di kedua menu selalu berasal dari perhitungan yang sama.
+     */
+    const hitungSerapan = (sumber = '') => {
+        const blok = (nama) => (store.realisasi && store.realisasi.blok.find(b => b.nama === nama)) || null;
+        const kelompok = (b, pola) => (b ? b.baris.find(x => x.level === 'kelompok' && pola.test(x.nama)) : null);
+        const paguAbt = store.anggaran ? store.anggaran.abt.items : [];
+        const daftarSumber = sumber ? [sumber] : ['ABT', 'Reguler'];
+
+        return PETA_ESELON.map(({ eselon, pola }) => {
+            let pagu = 0;
+            let realisasi = 0;
+            let namaKegiatan = '';
+            const cek = [];
+
+            daftarSumber.forEach(s => {
+                const k = kelompok(blok(s), pola);
+                if (k) {
+                    namaKegiatan = namaKegiatan || k.nama;
+                    realisasi += k.realisasiAnggaran;
+                }
+                if (s === 'ABT') {
+                    const a = paguAbt.find(i => (i.unit || '').toUpperCase() === eselon);
+                    if (a) {
+                        pagu += a.nilai;
+                        if (k && Math.abs(a.nilai - k.targetAnggaran) > 1) {
+                            cek.push(`Pagu ABT di sheet Anggaran (${formatRupiah(a.nilai)}) berbeda dengan target ABT `
+                                + `di sheet Realisasi Anggaran (${formatRupiah(k.targetAnggaran)}).`);
+                        }
+                    } else if (k) {
+                        pagu += k.targetAnggaran;
+                    }
+                } else if (k) {
+                    pagu += k.targetAnggaran;
+                }
+            });
+
+            const kegiatan = store.progres.filter(r =>
+                (r.unitEselon || '').toUpperCase() === eselon
+                && (!sumber || sumberDana(r.keterangan) === sumber));
+            const targetKegiatan = kegiatan.reduce((t, r) => t + r.targetAnggaran, 0);
+            const rusak = kegiatan.filter(r => r.targetError).length;
+            // Satu kegiatan tidak mungkin lebih mahal dari pagu seluruh unitnya.
+            const melebihi = kegiatan.filter(r => pagu > 0 && r.targetAnggaran > pagu).length;
+
+            if (rusak) {
+                cek.push(`${rusak} baris target anggaran di sheet Progres berisi rumus rusak (#REF!) sehingga terbaca 0.`);
+            }
+            if (melebihi) {
+                cek.push(`${melebihi} kegiatan bertarget lebih besar dari pagu unit ini sendiri - kemungkinan salah ketik.`);
+            }
+            if (pagu > 0 && Math.abs(targetKegiatan - pagu) / pagu > 0.01) {
+                cek.push(`Jumlah target kegiatan di sheet Progres ${formatRupiah(targetKegiatan)}, `
+                    + `tidak sama dengan pagu ${formatRupiah(pagu)}.`);
+            }
+
+            return {
+                eselon,
+                namaKegiatan,
+                pagu,
+                realisasi,
+                persen: pagu > 0 ? (realisasi / pagu) * 100 : 0,
+                sisa: Math.max(pagu - realisasi, 0),
+                kegiatan,
+                cek
+            };
+        }).filter(u => u.pagu > 0 || u.realisasi > 0 || u.kegiatan.length);
     };
 
-    const renderProgresTable = () => {
-        const tbody = document.getElementById('pg-table-body');
-        if (!tbody) return;
-        tbody.innerHTML = '';
+    const rupiahAtauNol = (n) => (n ? formatRupiah(n) : 'Rp 0');
 
-        const rows = progresState.filtered;
-        if (rows.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="15" class="table-empty">
-                <strong>Tidak ada data yang ditemukan.</strong>
-                Coba ubah filter kab/kota atau kata kunci pencarian.
-            </td></tr>`;
-            renderPagination('pg-pagination', 0, 1, progresState.perPage, () => {});
+    const renderKartuSerapan = (unit) => {
+        const wadah = document.getElementById('pg-sinkron');
+        if (!wadah) return;
+
+        if (!unit.length) {
+            wadah.innerHTML = `<p class="table-empty"><strong>Belum ada data anggaran.</strong>
+                Isi sheet Anggaran dan Realisasi Anggaran.</p>`;
             return;
         }
 
-        const start = (progresState.page - 1) * progresState.perPage;
-        rows.slice(start, start + progresState.perPage).forEach(item => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${dash(item.no)}</td>
-                <td>${dash(item.unitEselon)}</td>
-                <td>${dash(item.kabKota)}</td>
-                <td class="cell-truncate cell-strong" title="${esc(item.kegiatan)}">${dash(item.kegiatan)}</td>
-                <td class="cell-truncate" title="${esc(item.desa)}">${dash(item.desa)}</td>
-                <td class="num">${dash(item.targetVolume)}</td>
-                <td>${dash(item.targetSatuan || item.realisasiSatuan)}</td>
-                <td class="num">${item.targetAnggaran ? formatRupiah(item.targetAnggaran) : '-'}</td>
-                <td class="num">${dash(item.realisasiVolume)}</td>
-                <td class="num">${item.realisasiAnggaran ? formatRupiah(item.realisasiAnggaran) : '-'}</td>
-                <td>${barCapaian(item.persentase)}</td>
-                <td>${dash(item.targetPenyelesaian)}</td>
-                <td class="cell-truncate" title="${esc(item.penerima)}">${dash(item.penerima)}</td>
-                <td class="cell-truncate" title="${esc(item.keterangan)}">${dash(item.keterangan)}</td>
-                <td>${item.statusBantuan ? `<span class="badge badge-neutral">${esc(item.statusBantuan)}</span>` : '-'}</td>
-            `;
-            tbody.appendChild(tr);
-        });
+        const aktif = progresState.filters.eselon;
+        wadah.innerHTML = unit.map(u => {
+            const pilih = aktif === u.eselon;
+            const cek = u.cek.length
+                ? u.cek.map(c => `<li><i data-lucide="triangle-alert" class="icon"></i><span>${esc(c)}</span></li>`).join('')
+                : '<li class="is-ok"><i data-lucide="circle-check" class="icon"></i><span>Rincian kegiatan sesuai pagu.</span></li>';
 
-        renderPagination('pg-pagination', rows.length, progresState.page, progresState.perPage, (p) => {
-            progresState.page = p;
-            renderProgresTable();
-        });
+            return `<div class="sinkron-card${pilih ? ' is-active' : ''}" role="button" tabindex="0"
+                         data-eselon="${esc(u.eselon)}" aria-pressed="${pilih}">
+                <div class="sinkron-head">
+                    <div>
+                        <p class="sinkron-eselon">${esc(u.eselon)}</p>
+                        <p class="sinkron-kegiatan">${dash(u.namaKegiatan)}</p>
+                    </div>
+                    <span class="badge badge-neutral">${u.kegiatan.length} kegiatan</span>
+                </div>
+                ${barCapaian(u.persen)}
+                <dl class="sinkron-angka">
+                    <div><dt>Pagu</dt><dd>${rupiahAtauNol(u.pagu)}</dd></div>
+                    <div><dt>Terealisasi</dt><dd>${rupiahAtauNol(u.realisasi)}</dd></div>
+                    <div><dt>Sisa</dt><dd>${rupiahAtauNol(u.sisa)}</dd></div>
+                </dl>
+                <ul class="sinkron-cek">${cek}</ul>
+            </div>`;
+        }).join('');
+    };
+
+    const barisKegiatan = (r, pagu) => {
+        const target = r.targetError
+            ? '<span class="badge badge-danger" title="Rumus rusak di spreadsheet">#REF!</span>'
+            : (r.targetAnggaran ? formatRupiah(r.targetAnggaran) : '-');
+        const lebih = pagu > 0 && r.targetAnggaran > pagu
+            ? ' <span class="badge badge-warning" title="Target kegiatan ini lebih besar dari pagu unitnya">melebihi pagu</span>'
+            : '';
+
+        return `<tr>
+            <td>${dash(r.no)}</td>
+            <td>${dash(r.kabKota)}</td>
+            <td class="cell-truncate cell-strong" title="${esc(r.kegiatan)}">${dash(r.kegiatan)}</td>
+            <td class="cell-truncate" title="${esc(r.desa)}">${dash(r.desa)}</td>
+            <td class="num">${dash(r.targetVolume)}</td>
+            <td>${dash(r.targetSatuan || r.realisasiSatuan)}</td>
+            <td class="num">${target}${lebih}</td>
+            <td class="num">${dash(r.realisasiVolume)}</td>
+            <td class="num">${r.realisasiAnggaran ? formatRupiah(r.realisasiAnggaran) : '-'}</td>
+            <td>${barCapaian(r.persentase)}</td>
+            <td>${dash(r.targetPenyelesaian)}</td>
+            <td class="cell-truncate" title="${esc(r.penerima)}">${dash(r.penerima)}</td>
+            <td>${r.keterangan ? `<span class="badge badge-neutral">${esc(r.keterangan)}</span>` : '-'}</td>
+            <td>${r.statusBantuan ? `<span class="badge badge-neutral">${esc(r.statusBantuan)}</span>` : '-'}</td>
+        </tr>`;
+    };
+
+    const renderTabelKegiatan = (unit) => {
+        const tbody = document.getElementById('pg-table-body');
+        if (!tbody) return;
+
+        const f = progresState.filters;
+        const cocok = (r) => (!f.kabKota || r.kabKota === f.kabKota)
+            && (!f.search || [r.kabKota, r.kegiatan, r.desa, r.penerima, r.keterangan]
+                .some(v => (v || '').toLowerCase().includes(f.search)));
+
+        const grup = unit.map(u => ({
+            judul: `${u.eselon} &middot; ${esc(u.namaKegiatan || '')} &middot; pagu ${rupiahAtauNol(u.pagu)}`,
+            pagu: u.pagu,
+            baris: u.kegiatan.filter(cocok)
+        }));
+
+        // Kegiatan dengan Unit Eselon I di luar pemetaan tetap ditampilkan,
+        // supaya tidak ada baris sheet yang hilang diam-diam.
+        if (!f.eselon) {
+            const dikenal = new Set(PETA_ESELON.map(p => p.eselon));
+            const lain = store.progres.filter(r =>
+                !dikenal.has((r.unitEselon || '').toUpperCase())
+                && (!f.sumber || sumberDana(r.keterangan) === f.sumber)
+                && cocok(r));
+            if (lain.length) grup.push({ judul: 'Unit tanpa pemetaan anggaran', pagu: 0, baris: lain });
+        }
+
+        const total = grup.reduce((t, g) => t + g.baris.length, 0);
+        setText('pg-jumlah', `${total} kegiatan`);
+
+        if (!total) {
+            tbody.innerHTML = `<tr><td colspan="14" class="table-empty">
+                <strong>Tidak ada kegiatan yang cocok.</strong>
+                Coba ubah sumber dana, unit, kab/kota, atau kata kunci pencarian.
+            </td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = grup.filter(g => g.baris.length).map(g =>
+            `<tr class="row-group"><td colspan="14">${g.judul} &middot; ${g.baris.length} kegiatan</td></tr>`
+            + g.baris.map(r => barisKegiatan(r, g.pagu)).join('')
+        ).join('');
     };
 
     const renderProgres = () => {
-        renderProgresSummary();
-        renderProgresTable();
+        const f = progresState.filters;
+        const semua = hitungSerapan(f.sumber);
+        const dipilih = f.eselon ? semua.filter(u => u.eselon === f.eselon) : semua;
+
+        const pagu = dipilih.reduce((t, u) => t + u.pagu, 0);
+        const realisasi = dipilih.reduce((t, u) => t + u.realisasi, 0);
+
+        setText('pg-stat-target', rupiahAtauNol(pagu));
+        setText('pg-stat-realisasi', rupiahAtauNol(realisasi));
+        setText('pg-stat-persen', `${(pagu > 0 ? (realisasi / pagu) * 100 : 0).toFixed(1)}%`);
+        setText('pg-stat-sisa', rupiahAtauNol(Math.max(pagu - realisasi, 0)));
+
+        // Kartu selalu menampilkan semua unit, agar perbandingan antarunit tetap terlihat.
+        renderKartuSerapan(semua);
+        renderTabelKegiatan(dipilih);
+
+        if (window.lucide) lucide.createIcons({ nameAttr: 'data-lucide' });
     };
 
+    /** Isi pilihan unit & kab/kota; dipanggil ulang saat data dimuat ulang. */
+    const isiOpsiProgres = () => {
+        const pertahankan = (id, nilai, placeholder, kunci) => {
+            const el = document.getElementById(id);
+            const lama = el ? el.value : '';
+            populateSelect(id, nilai, placeholder);
+            if (el && nilai.includes(lama)) el.value = lama;
+            progresState.filters[kunci] = el ? el.value : '';
+        };
+        pertahankan('pg-filter-eselon', hitungSerapan('').map(u => u.eselon), 'Semua Unit', 'eselon');
+        pertahankan('pg-filter-kabkota',
+            [...new Set(store.progres.map(r => r.kabKota).filter(Boolean))].sort(), 'Semua Kab/Kota', 'kabKota');
+    };
+
+    /** Dipanggil tombol "Muat ulang" setelah data baru masuk. */
     const applyProgresFilters = () => {
-        const { kabKota, search } = progresState.filters;
-        progresState.filtered = store.progres.filter(item => {
-            const matchKab = !kabKota || item.kabKota === kabKota;
-            const matchSearch = !search ||
-                [item.kabKota, item.unitEselon, item.kegiatan, item.desa, item.penerima, item.keterangan]
-                    .some(v => (v || '').toLowerCase().includes(search));
-            return matchKab && matchSearch;
-        });
-        progresState.page = 1;
+        isiOpsiProgres();
         renderProgres();
     };
 
     const setupProgres = () => {
-        populateSelect('pg-filter-kabkota',
-            [...new Set(store.progres.map(i => i.kabKota).filter(Boolean))].sort(), 'Semua Kab/Kota');
+        isiOpsiProgres();
 
-        document.getElementById('pg-filter-kabkota')?.addEventListener('change', (e) => {
-            progresState.filters.kabKota = e.target.value;
-            applyProgresFilters();
-        });
-        document.getElementById('pg-search')?.addEventListener('input', (e) => {
-            progresState.filters.search = e.target.value.toLowerCase();
-            applyProgresFilters();
-        });
-        document.getElementById('pg-btn-reset')?.addEventListener('click', () => {
-            ['pg-filter-kabkota', 'pg-search'].forEach(id => {
+        const on = (id, ev, fn) => document.getElementById(id)?.addEventListener(ev, fn);
+        on('pg-filter-sumber', 'change', (e) => { progresState.filters.sumber = e.target.value; renderProgres(); });
+        on('pg-filter-eselon', 'change', (e) => { progresState.filters.eselon = e.target.value; renderProgres(); });
+        on('pg-filter-kabkota', 'change', (e) => { progresState.filters.kabKota = e.target.value; renderProgres(); });
+        on('pg-search', 'input', (e) => { progresState.filters.search = e.target.value.toLowerCase(); renderProgres(); });
+        on('pg-btn-reset', 'click', () => {
+            ['pg-filter-sumber', 'pg-filter-eselon', 'pg-filter-kabkota', 'pg-search'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.value = '';
             });
-            progresState.filters = { kabKota: '', search: '' };
-            applyProgresFilters();
+            progresState.filters = { sumber: '', eselon: '', kabKota: '', search: '' };
+            renderProgres();
         });
 
-        applyProgresFilters();
+        // Klik kartu unit = pilih unit itu (klik lagi untuk melepas).
+        const wadah = document.getElementById('pg-sinkron');
+        const pilihUnit = (target) => {
+            const kartu = target.closest('[data-eselon]');
+            if (!kartu) return;
+            const es = kartu.dataset.eselon;
+            progresState.filters.eselon = progresState.filters.eselon === es ? '' : es;
+            const sel = document.getElementById('pg-filter-eselon');
+            if (sel) sel.value = progresState.filters.eselon;
+            renderProgres();
+        };
+        wadah?.addEventListener('click', (e) => pilihUnit(e.target));
+        wadah?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                pilihUnit(e.target);
+            }
+        });
+
+        renderProgres();
     };
 
     // =========================================================================
@@ -1194,6 +1382,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Bar chart: Usulan vs ABT per Unit Eselon I
         const units = [...new Set([...a.usulan.items, ...a.abt.items].map(i => i.unit))];
         const nilaiDari = (items, unit) => (items.find(i => i.unit === unit) || {}).nilai || 0;
+        const serapanAbt = hitungSerapan('ABT');
         const canvas = document.getElementById('chart-anggaran');
         const chartWrap = document.getElementById('ang-chart-wrap');
 
@@ -1206,7 +1395,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     { label: a.usulan.judul, data: units.map(u => nilaiDari(a.usulan.items, u)),
                       backgroundColor: colors.primaryLight, borderRadius: 4 },
                     { label: a.abt.judul, data: units.map(u => nilaiDari(a.abt.items, u)),
-                      backgroundColor: colors.primary, borderRadius: 4 }
+                      backgroundColor: colors.primary, borderRadius: 4 },
+                    // Diambil dari hitungSerapan() yang sama dengan menu Progres,
+                    // jadi realisasi di kedua menu tidak mungkin berbeda.
+                    { label: 'Realisasi ABT',
+                      data: units.map(u => (serapanAbt.find(x => x.eselon === u.toUpperCase()) || {}).realisasi || 0),
+                      backgroundColor: colors.success || '#16a34a', borderRadius: 4 }
                 ]
             };
             if (chartAnggaran) {

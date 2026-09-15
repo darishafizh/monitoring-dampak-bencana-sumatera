@@ -1332,3 +1332,121 @@ th.num, td.num {
         gap: 2px;
     }
 }
+
+/* ==========================================================================
+   Menu Progres: penggunaan anggaran per Unit Eselon I
+   ========================================================================== */
+
+.sinkron-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--space-4);
+    padding: var(--space-5);
+}
+
+.sinkron-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface);
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sinkron-card:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-md);
+}
+
+.sinkron-card:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.sinkron-card.is-active {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgb(37 99 235 / 0.12);
+}
+
+.sinkron-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.sinkron-eselon {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text);
+}
+
+.sinkron-kegiatan {
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+}
+
+.sinkron-angka {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-2);
+}
+
+.sinkron-angka dt {
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+}
+
+.sinkron-angka dd {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    overflow-wrap: anywhere;
+}
+
+/* Hasil pencocokan antar sheet: hijau bila sesuai, oranye bila ada selisih */
+.sinkron-cek {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: var(--space-3);
+    border-top: 1px dashed var(--border);
+}
+
+.sinkron-cek li {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--warning);
+}
+
+.sinkron-cek li.is-ok {
+    color: var(--success);
+}
+
+.sinkron-cek .icon {
+    width: 14px;
+    height: 14px;
+    margin-top: 1px;
+}
+
+/* Filter di dalam panel tabel: menandakan hanya berlaku untuk tabelnya */
+.toolbar--inset {
+    padding: var(--space-3) var(--space-5);
+    border-bottom: 1px solid var(--border);
+}
+
+@media (max-width: 640px) {
+    .sinkron-angka {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
